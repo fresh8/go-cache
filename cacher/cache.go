@@ -12,7 +12,7 @@ type cacher struct {
 type Cacher interface {
 	Setup(common.Engine)
 	Get(string, func() []byte) ([]byte, error)
-	Expire(string) (error)
+	Expire(string) error
 }
 
 // NewCacher creates a new generic cacher with the given engine.

@@ -231,7 +231,7 @@ func TestRedisEngine_Lock(t *testing.T) {
 	fakeConn := redigomock.NewConn()
 	engine := NewRedisStore("testing", &mockPool{
 		conn: fakeConn,
-	}, 1 * time.Minute)
+	}, 1*time.Minute)
 
 	expectedErr := fmt.Errorf("Random error!")
 	cmd1 := fakeConn.Command("SET", "testing:lock:lock-key", []byte("1")).Expect("OK").ExpectError(expectedErr)
@@ -255,7 +255,7 @@ func TestRedisEngine_Unlock(t *testing.T) {
 	fakeConn := redigomock.NewConn()
 	engine := NewRedisStore("testing", &mockPool{
 		conn: fakeConn,
-	}, 1 * time.Minute)
+	}, 1*time.Minute)
 
 	expectedErr := fmt.Errorf("Random error!")
 	cmd1 := fakeConn.Command("DEL", "testing:lock:del-key").Expect("OK").ExpectError(expectedErr)
