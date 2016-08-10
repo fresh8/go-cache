@@ -1,11 +1,13 @@
 package cacher
 
 import (
+	"github.com/fresh8/go-cache/joque"
 	"github.com/fresh8/go-cache/engine/common"
 )
 
 type cacher struct {
 	engine common.Engine
+	jobQueue chan joque.Job
 }
 
 // Cacher defines the interface for a caching system so it can be customised.
@@ -19,6 +21,7 @@ type Cacher interface {
 func NewCacher(engine common.Engine) Cacher {
 	return cacher{
 		engine: engine,
+		jobQueue: joque.Setup(5, 5),
 	}
 }
 
@@ -46,7 +49,14 @@ func (c cacher) Get(key string, regenerate func() []byte) (data []byte, err erro
 			return
 		}
 
-		// TODO: Implement background generation with work dispatcher
+		// Send the regenerate function to the job queue to be processed
+		c.jobQueue <- func() {
+			c.engine.Lock(key)
+			defer c.engine.Unlock(key)
+
+			regenerate()
+		}
+		return
 	}
 
 	// If the key doesn't exist, generate it now and return
