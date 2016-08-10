@@ -2,13 +2,14 @@ package common
 
 import (
 	"errors"
+	"time"
 )
 
 // Engine is the interface all caching engines must adhere to
 type Engine interface {
 	Exists(string) bool
 	Get(string) ([]byte, error)
-	Put(string, []byte) error
+	Put(string, []byte, time.Time) error
 
 	Expire(string) error
 	IsExpired(string) bool

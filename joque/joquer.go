@@ -1,7 +1,7 @@
 package joque
 
 // Job is a unit of work.
-type Job func() ()
+type Job func()
 
 // NewWorker creates takes a numeric id and a channel w/ worker pool.
 func NewWorker(id int, workerPool chan chan Job) Worker {
@@ -28,10 +28,10 @@ func (w Worker) start() {
 
 			select {
 			case job := <-w.jobQueue:
-			// Dispatcher has added a job to my jobQueue.
+				// Dispatcher has added a job to my jobQueue.
 				job()
 			case <-w.quitChan:
-			// We have been asked to stop.
+				// We have been asked to stop.
 				return
 			}
 		}
@@ -83,7 +83,7 @@ func (d *Dispatcher) dispatch() {
 }
 
 // Setup
-func Setup(maxQueueSize int, maxWorkers int) (chan Job) {
+func Setup(maxQueueSize int, maxWorkers int) chan Job {
 	// Create the job queue.
 	jobQueue := make(chan Job, maxQueueSize)
 

@@ -1,26 +1,28 @@
 package cacher
 
 import (
-	"github.com/fresh8/go-cache/joque"
+	"time"
+
 	"github.com/fresh8/go-cache/engine/common"
+	"github.com/fresh8/go-cache/joque"
 )
 
 type cacher struct {
-	engine common.Engine
+	engine   common.Engine
 	jobQueue chan joque.Job
 }
 
 // Cacher defines the interface for a caching system so it can be customised.
 type Cacher interface {
 	Setup(common.Engine)
-	Get(string, func() []byte) ([]byte, error)
+	Get(string, time.Time, func() []byte) ([]byte, error)
 	Expire(string) error
 }
 
 // NewCacher creates a new generic cacher with the given engine.
 func NewCacher(engine common.Engine) Cacher {
 	return cacher{
-		engine: engine,
+		engine:   engine,
 		jobQueue: joque.Setup(5, 5),
 	}
 }
@@ -30,7 +32,7 @@ func (c cacher) Setup(engine common.Engine) {
 	c.engine = engine
 }
 
-func (c cacher) Get(key string, regenerate func() []byte) (data []byte, err error) {
+func (c cacher) Get(key string, expires time.Time, regenerate func() []byte) (data []byte, err error) {
 	if c.engine.Exists(key) {
 		data, err = c.engine.Get(key)
 
@@ -54,14 +56,15 @@ func (c cacher) Get(key string, regenerate func() []byte) (data []byte, err erro
 			c.engine.Lock(key)
 			defer c.engine.Unlock(key)
 
-			regenerate()
+			data = regenerate()
+			c.engine.Put(key, data, expires)
 		}
 		return
 	}
 
 	// If the key doesn't exist, generate it now and return
 	data = regenerate()
-	err = c.engine.Put(key, data)
+	err = c.engine.Put(key, data, expires)
 
 	return
 }

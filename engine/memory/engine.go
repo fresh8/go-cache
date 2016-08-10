@@ -2,6 +2,7 @@ package memory
 
 import (
 	"sync"
+	"time"
 
 	"github.com/fresh8/go-cache/engine/common"
 )
@@ -47,7 +48,7 @@ func (e *Engine) Get(key string) (data []byte, err error) {
 }
 
 // Put stores data against a key, else it returns an error
-func (e *Engine) Put(key string, data []byte) error {
+func (e *Engine) Put(key string, data []byte, expiry time.Time) error {
 	storeLock.Lock()
 	defer storeLock.Unlock()
 

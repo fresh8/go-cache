@@ -91,13 +91,14 @@ func TestRedisEngine_Put(t *testing.T) {
 	}, cleanupTimeout)
 
 	content := []byte("hello")
+	expires := time.Now().Add(1 * time.Hour)
 
 	expectedErr := fmt.Errorf("Random error!")
 	cmd1 := fakeConn.Command("SETEX", "testing:new-key", content, cleanupTimeout.Seconds())
-	cmd2 := fakeConn.Command("SET", "testing:expire:new-key", 1)
+	cmd2 := fakeConn.Command("SET", "testing:expire:new-key", expires.Unix())
 	cmd3 := fakeConn.Command("EXEC").Expect([]interface{}{"OK", "OK"}).ExpectError(expectedErr)
 
-	err := engine.Put("new-key", []byte("hello"))
+	err := engine.Put("new-key", []byte("hello"), expires)
 	if err != nil {
 		t.Fatalf("no error expected, %s given", err)
 	}
@@ -114,7 +115,7 @@ func TestRedisEngine_Put(t *testing.T) {
 		t.Fatal("exec command was not used")
 	}
 
-	err = engine.Put("new-key", []byte("hello"))
+	err = engine.Put("new-key", []byte("hello"), expires)
 	if err != expectedErr {
 		t.Fatalf("random error expected, %s given", err)
 	}
@@ -126,31 +127,52 @@ func TestRedisEngine_IsExpired(t *testing.T) {
 		conn: fakeConn,
 	}, 1*time.Minute)
 
-	cmd := fakeConn.Command("EXISTS", "testing:expire:non-existing").Expect([]byte("false"))
+	cmd1 := fakeConn.Command("EXISTS", "testing:expire:non-existing").Expect([]byte("false"))
 	if engine.IsExpired("non-existing") {
 		t.Fatal("key does not exist, marked as existing")
 	}
 
-	if fakeConn.Stats(cmd) != 1 {
+	if fakeConn.Stats(cmd1) != 1 {
 		t.Fatal("exists command was not used")
 	}
 
-	cmd = fakeConn.Command("EXISTS", "testing:expire:existing").Expect([]byte("true"))
+	fakeConn.Clear()
+
+	cmd2 := fakeConn.Command("EXISTS", "testing:expire:existing").Expect([]byte("true"))
+	cmd3 := fakeConn.Command("GET", "testing:expire:existing").Expect(time.Now().Add(1 * time.Minute).Unix())
+	if engine.IsExpired("existing") {
+		t.Fatal("key exist, marked as non-existent")
+	}
+
+	if fakeConn.Stats(cmd2) != 1 {
+		t.Fatal("exists command was not used")
+	}
+
+	if fakeConn.Stats(cmd3) != 1 {
+		t.Fatal("get command was not used")
+	}
+
+	fakeConn.Clear()
+
+	cmd4 := fakeConn.Command("EXISTS", "testing:expire:existing").Expect([]byte("true"))
+	cmd5 := fakeConn.Command("GET", "testing:expire:existing").Expect(time.Now().Add(-1 * time.Minute).Unix())
 	if !engine.IsExpired("existing") {
 		t.Fatal("key exist, marked as non-existent")
 	}
 
-	if fakeConn.Stats(cmd) != 1 {
+	if fakeConn.Stats(cmd4) != 1 {
 		t.Fatal("exists command was not used")
 	}
 
-	cmd = fakeConn.Command("EXISTS", "testing:expire:existing").ExpectError(fmt.Errorf("Random error!"))
-	if engine.IsExpired("non-existing") {
+	if fakeConn.Stats(cmd5) != 1 {
+		t.Fatal("get command was not used")
+	}
+
+	fakeConn.Clear()
+
+	fakeConn.Command("EXISTS", "testing:expire:existing").ExpectError(fmt.Errorf("Random error!"))
+	if engine.IsExpired("existing") {
 		t.Fatal("error for existing should return false")
-	}
-
-	if fakeConn.Stats(cmd) != 1 {
-		t.Fatal("exists command was not used")
 	}
 }
 

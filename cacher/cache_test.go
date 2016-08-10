@@ -1,9 +1,10 @@
 package cacher
 
 import (
-	"testing"
-
 	"bytes"
+	"testing"
+	"time"
+
 	engine "github.com/fresh8/go-cache/engine/memory"
 )
 
@@ -23,7 +24,7 @@ func TestCacher_Get(t *testing.T) {
 		return content
 	}
 
-	data, err := cache.Get("existing", regenerate)
+	data, err := cache.Get("existing", time.Now().Add(1*time.Minute), regenerate)
 	if err != nil {
 		t.Fatalf("no error expected, %s given", err)
 	}
@@ -36,7 +37,7 @@ func TestCacher_Get(t *testing.T) {
 		t.Fatalf("data expected to be different, %s expected, %s given", content, data)
 	}
 
-	data, err = cache.Get("existing", regenerate)
+	data, err = cache.Get("existing", time.Now().Add(1*time.Minute), regenerate)
 	if bytes.Compare(data, content) != 0 {
 		t.Fatalf("data expected to be different, %s expected, %s given", content, data)
 	}
@@ -48,7 +49,7 @@ func TestCacher_Get(t *testing.T) {
 	e.Expire("existing")
 
 	newContent := append(content, []byte("-world")...)
-	data, err = cache.Get("existing", func() []byte {
+	data, err = cache.Get("existing", time.Now().Add(1*time.Minute), func() []byte {
 		count = count + 1
 		return newContent
 	})
