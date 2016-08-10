@@ -3,8 +3,9 @@ package redis
 import (
 	"time"
 
-	redigo "github.com/garyburd/redigo/redis"
 	"github.com/fresh8/go-cache/engine/common"
+	redigo "github.com/garyburd/redigo/redis"
+	//"log"
 )
 
 type pl interface {
@@ -20,7 +21,7 @@ type redisEngine struct {
 
 var (
 	expirePrefix = "expire:"
-	lockPrefix   = "rlock:"
+	lockPrefix   = "lock:"
 )
 
 func NewRedisStore(prefix string, pool pl, cleanupTimeout time.Duration) *redisEngine {
@@ -48,7 +49,7 @@ func (e *redisEngine) Get(key string) (data []byte, err error) {
 	conn := e.pool.Get()
 	defer conn.Close()
 
-	data, err = redigo.Bytes(conn.Do("GET", key))
+	data, err = redigo.Bytes(conn.Do("GET", e.prefix+key))
 	if data == nil {
 		err = common.ErrNonExistentKey
 	}
@@ -61,17 +62,16 @@ func (e *redisEngine) Put(key string, data []byte) error {
 	defer conn.Close()
 
 	// Pipeline commands
-	conn.Send("SETEX", e.prefix+key, data, time.Now().Add(e.cleanupTimeout))
-	conn.Send("SET", e.prefix+key+expirePrefix, time.Now().Add(1*time.Hour))
-	conn.Flush()
+	conn.Send("SETEX", e.prefix+key, data, e.cleanupTimeout.Seconds())
+	conn.Send("SET", e.prefix+expirePrefix+key, 1)
+	_, err := conn.Do("EXEC")
 
-	// TODO: Use conn.Recieve to get errors/content from each command
-	return nil
+	return err
 }
 
 // IsExpired checks to see if the key has expired
 func (e *redisEngine) IsExpired(key string) bool {
-	return e.Exists(e.prefix + key + expirePrefix)
+	return e.Exists(expirePrefix + key)
 }
 
 // Expire marks the key as expired, and removes it from the storage engine
@@ -81,21 +81,29 @@ func (e *redisEngine) Expire(key string) error {
 
 	// Pipeline commands
 	conn.Send("DEL", e.prefix+key)
-	conn.Send("DEL", e.prefix+key+expirePrefix)
-	conn.Flush()
+	conn.Send("DEL", e.prefix+expirePrefix+key)
+	conn.Send("DEL", e.prefix+lockPrefix+key)
+	_, err := conn.Do("EXEC")
 
-	// TODO: Use conn.Receive to get errors/content from each command
-	return nil
+	return err
 }
 
 func (e *redisEngine) IsLocked(key string) bool {
-	return e.Exists(e.prefix + key + lockPrefix)
+	return e.Exists(lockPrefix + key)
 }
 
 func (e *redisEngine) Lock(key string) error {
-	return e.Put(e.prefix+key+lockPrefix, []byte("1"))
+	conn := e.pool.Get()
+	defer conn.Close()
+
+	_, err := conn.Do("SET", e.prefix+lockPrefix+key, []byte("1"))
+	return err
 }
 
 func (e *redisEngine) Unlock(key string) error {
-	return e.Expire(e.prefix + key + lockPrefix)
+	conn := e.pool.Get()
+	defer conn.Close()
+
+	_, err := conn.Do("DEL", e.prefix+lockPrefix+key)
+	return err
 }

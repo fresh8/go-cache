@@ -64,6 +64,7 @@ func (e *inMemory) Expire(key string) error {
 	}
 
 	delete(e.store, key)
+	e.Unlock(key)
 
 	return nil
 }

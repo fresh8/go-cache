@@ -1,12 +1,14 @@
 package redis
 
 import (
+	"bytes"
+	"fmt"
 	"testing"
+	"time"
 
+	"github.com/fresh8/go-cache/engine/common"
 	redigo "github.com/garyburd/redigo/redis"
 	"github.com/rafaeljusto/redigomock"
-	"time"
-	"fmt"
 )
 
 type mockPool struct {
@@ -23,20 +25,252 @@ func TestRedisEngine_Exists(t *testing.T) {
 		conn: fakeConn,
 	}, 1*time.Minute)
 
-	fakeConn.Command("EXISTS", "testing:non-existing").Expect([]byte("false"))
-
+	cmd := fakeConn.Command("EXISTS", "testing:non-existing").Expect([]byte("false"))
 	if engine.Exists("non-existing") {
 		t.Fatal("key does not exist, marked as existing")
 	}
 
-	fakeConn.Command("EXISTS", "testing:existing").Expect([]byte("true"))
+	if fakeConn.Stats(cmd) != 1 {
+		t.Fatal("exists command was not used")
+	}
 
+	cmd = fakeConn.Command("EXISTS", "testing:existing").Expect([]byte("true"))
 	if !engine.Exists("existing") {
 		t.Fatal("key exist, marked as non-existent")
 	}
 
-	fakeConn.Command("EXISTS", "testing:existing").ExpectError(fmt.Errorf("Random error!"))
+	if fakeConn.Stats(cmd) != 1 {
+		t.Fatal("exists command was not used")
+	}
+
+	cmd = fakeConn.Command("EXISTS", "testing:existing").ExpectError(fmt.Errorf("Random error!"))
 	if engine.Exists("non-existing") {
 		t.Fatal("error for existing should return false")
+	}
+
+	if fakeConn.Stats(cmd) != 1 {
+		t.Fatal("exists command was not used")
+	}
+}
+
+func TestRedisEngine_Get(t *testing.T) {
+	fakeConn := redigomock.NewConn()
+	engine := NewRedisStore("testing", &mockPool{
+		conn: fakeConn,
+	}, 1*time.Minute)
+
+	fakeConn.Command("GET", "testing:non-existing").ExpectError(redigo.ErrNil)
+
+	data, err := engine.Get("non-existing")
+	if err != common.ErrNonExistentKey {
+		t.Fatalf("non-existing key error expected, %s given", err)
+	}
+
+	if data != nil {
+		t.Fatal("data returned for non-existing key")
+	}
+
+	content := []byte("hello")
+	fakeConn.Command("GET", "testing:existing").Expect(content)
+
+	data, err = engine.Get("existing")
+	if err != nil {
+		t.Fatalf("no error expected, %s given", err)
+	}
+
+	if bytes.Compare(data, content) != 0 {
+		t.Fatalf("%s expected, %s given", content, data)
+	}
+}
+
+func TestRedisEngine_Put(t *testing.T) {
+	fakeConn := redigomock.NewConn()
+	cleanupTimeout := 1 * time.Minute
+	engine := NewRedisStore("testing", &mockPool{
+		conn: fakeConn,
+	}, cleanupTimeout)
+
+	content := []byte("hello")
+
+	expectedErr := fmt.Errorf("Random error!")
+	cmd1 := fakeConn.Command("SETEX", "testing:new-key", content, cleanupTimeout.Seconds())
+	cmd2 := fakeConn.Command("SET", "testing:expire:new-key", 1)
+	cmd3 := fakeConn.Command("EXEC").Expect([]interface{}{"OK", "OK"}).ExpectError(expectedErr)
+
+	err := engine.Put("new-key", []byte("hello"))
+	if err != nil {
+		t.Fatalf("no error expected, %s given", err)
+	}
+
+	if fakeConn.Stats(cmd1) != 1 {
+		t.Fatal("setex command was not used")
+	}
+
+	if fakeConn.Stats(cmd2) != 1 {
+		t.Fatal("set command was not used")
+	}
+
+	if fakeConn.Stats(cmd3) != 1 {
+		t.Fatal("exec command was not used")
+	}
+
+	err = engine.Put("new-key", []byte("hello"))
+	if err != expectedErr {
+		t.Fatalf("random error expected, %s given", err)
+	}
+}
+
+func TestRedisEngine_IsExpired(t *testing.T) {
+	fakeConn := redigomock.NewConn()
+	engine := NewRedisStore("testing", &mockPool{
+		conn: fakeConn,
+	}, 1*time.Minute)
+
+	cmd := fakeConn.Command("EXISTS", "testing:expire:non-existing").Expect([]byte("false"))
+	if engine.IsExpired("non-existing") {
+		t.Fatal("key does not exist, marked as existing")
+	}
+
+	if fakeConn.Stats(cmd) != 1 {
+		t.Fatal("exists command was not used")
+	}
+
+	cmd = fakeConn.Command("EXISTS", "testing:expire:existing").Expect([]byte("true"))
+	if !engine.IsExpired("existing") {
+		t.Fatal("key exist, marked as non-existent")
+	}
+
+	if fakeConn.Stats(cmd) != 1 {
+		t.Fatal("exists command was not used")
+	}
+
+	cmd = fakeConn.Command("EXISTS", "testing:expire:existing").ExpectError(fmt.Errorf("Random error!"))
+	if engine.IsExpired("non-existing") {
+		t.Fatal("error for existing should return false")
+	}
+
+	if fakeConn.Stats(cmd) != 1 {
+		t.Fatal("exists command was not used")
+	}
+}
+
+func TestRedisEngine_Expire(t *testing.T) {
+	fakeConn := redigomock.NewConn()
+	engine := NewRedisStore("testing", &mockPool{
+		conn: fakeConn,
+	}, 1*time.Minute)
+
+	expectedErr := fmt.Errorf("Random error!")
+	cmd1 := fakeConn.Command("DEL", "testing:remove-key")
+	cmd2 := fakeConn.Command("DEL", "testing:expire:remove-key")
+	cmd3 := fakeConn.Command("DEL", "testing:lock:remove-key")
+	cmd4 := fakeConn.Command("EXEC").Expect([]interface{}{"OK", "OK", "OK"}).ExpectError(expectedErr)
+
+	err := engine.Expire("remove-key")
+	if err != nil {
+		t.Fatalf("no error expected, %s given", err)
+	}
+
+	if fakeConn.Stats(cmd1) != 1 {
+		t.Fatal("del key command was not used")
+	}
+
+	if fakeConn.Stats(cmd2) != 1 {
+		t.Fatal("del expire command was not used")
+	}
+
+	if fakeConn.Stats(cmd3) != 1 {
+		t.Fatal("del lock command was not used")
+	}
+
+	if fakeConn.Stats(cmd4) != 1 {
+		t.Fatal("exec command was not used")
+	}
+
+	err = engine.Expire("remove-key")
+	if err != expectedErr {
+		t.Fatalf("random error expected, %s given", err)
+	}
+}
+
+func TestRedisEngine_IsLocked(t *testing.T) {
+	fakeConn := redigomock.NewConn()
+	engine := NewRedisStore("testing", &mockPool{
+		conn: fakeConn,
+	}, 1*time.Minute)
+
+	cmd := fakeConn.Command("EXISTS", "testing:lock:non-existing").Expect([]byte("false"))
+	if engine.IsLocked("non-existing") {
+		t.Fatal("key does not exist, marked as existing")
+	}
+
+	if fakeConn.Stats(cmd) != 1 {
+		t.Fatal("exists command was not used")
+	}
+
+	cmd = fakeConn.Command("EXISTS", "testing:lock:existing").Expect([]byte("true"))
+	if !engine.IsLocked("existing") {
+		t.Fatal("key exist, marked as non-existent")
+	}
+
+	if fakeConn.Stats(cmd) != 1 {
+		t.Fatal("exists command was not used")
+	}
+
+	cmd = fakeConn.Command("EXISTS", "testing:lock:existing").ExpectError(fmt.Errorf("Random error!"))
+	if engine.IsLocked("non-existing") {
+		t.Fatal("error for existing should return false")
+	}
+
+	if fakeConn.Stats(cmd) != 1 {
+		t.Fatal("exists command was not used")
+	}
+}
+
+func TestRedisEngine_Lock(t *testing.T) {
+	fakeConn := redigomock.NewConn()
+	engine := NewRedisStore("testing", &mockPool{
+		conn: fakeConn,
+	}, 1 * time.Minute)
+
+	expectedErr := fmt.Errorf("Random error!")
+	cmd1 := fakeConn.Command("SET", "testing:lock:lock-key", []byte("1")).Expect("OK").ExpectError(expectedErr)
+
+	err := engine.Lock("lock-key")
+	if err != nil {
+		t.Fatalf("no error expected, %s given", err)
+	}
+
+	if fakeConn.Stats(cmd1) != 1 {
+		t.Fatal("set command was not used")
+	}
+
+	err = engine.Lock("lock-key")
+	if err != expectedErr {
+		t.Fatalf("random error expected, %s given", err)
+	}
+}
+
+func TestRedisEngine_Unlock(t *testing.T) {
+	fakeConn := redigomock.NewConn()
+	engine := NewRedisStore("testing", &mockPool{
+		conn: fakeConn,
+	}, 1 * time.Minute)
+
+	expectedErr := fmt.Errorf("Random error!")
+	cmd1 := fakeConn.Command("DEL", "testing:lock:del-key").Expect("OK").ExpectError(expectedErr)
+
+	err := engine.Unlock("del-key")
+	if err != nil {
+		t.Fatalf("no error expected, %s given", err)
+	}
+
+	if fakeConn.Stats(cmd1) != 1 {
+		t.Fatal("del command was not used")
+	}
+
+	err = engine.Unlock("del-key")
+	if err != expectedErr {
+		t.Fatalf("random error expected, %s given", err)
 	}
 }

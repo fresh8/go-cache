@@ -7,6 +7,8 @@ import (
 	engine "github.com/fresh8/go-cache/engine/memory"
 )
 
+// TODO: This should be replaced by a mock, not use memory engine
+
 func TestCacher_Setup(t *testing.T) {
 	t.Skip()
 }

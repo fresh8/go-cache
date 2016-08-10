@@ -179,3 +179,30 @@ func TestInMemory_IsExpired(t *testing.T) {
 		t.Fatal("memory store should always return false")
 	}
 }
+
+func TestInMemory_Expire(t *testing.T) {
+	content := []byte("hello")
+
+	memStore := NewMemoryStore()
+
+	err := memStore.Expire("existing")
+	if err != common.ErrNonExistentKey {
+		t.Fatalf("key does not exist, should return error")
+	}
+
+	memStore.store["existing"] = content
+	memStore.locks["existing"] = true
+
+	err = memStore.Expire("existing")
+	if err != nil {
+		t.Fatalf("no error expected, %s given", err)
+	}
+
+	if len(memStore.store) != 0 {
+		t.Fatalf("store length should be 0 after expiring, %d given", len(memStore.store))
+	}
+
+	if len(memStore.locks) != 0 {
+		t.Fatalf("locks length should be 0 after expiring, %d given", len(memStore.locks))
+	}
+}
