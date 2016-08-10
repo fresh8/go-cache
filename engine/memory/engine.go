@@ -6,7 +6,8 @@ import (
 	"github.com/fresh8/go-cache/engine/common"
 )
 
-type inMemory struct {
+// Engine is the default memory storage engine
+type Engine struct {
 	store map[string][]byte
 	locks map[string]bool
 }
@@ -17,19 +18,22 @@ var (
 	locksLock sync.RWMutex
 )
 
-func NewMemoryStore() *inMemory {
-	return &inMemory{
+// NewMemoryStore creates a new standard in memory store
+func NewMemoryStore() *Engine {
+	return &Engine{
 		store: make(map[string][]byte),
 		locks: make(map[string]bool),
 	}
 }
 
-func (e *inMemory) Exists(key string) bool {
+// Exists checks to see if a key exists in the store
+func (e *Engine) Exists(key string) bool {
 	_, ok := e.store[key]
 	return ok
 }
 
-func (e *inMemory) Get(key string) (data []byte, err error) {
+// Get retrieves data from the store based on key, if it exists, else it returns an error
+func (e *Engine) Get(key string) (data []byte, err error) {
 	storeLock.RLock()
 	defer storeLock.RUnlock()
 
@@ -42,7 +46,8 @@ func (e *inMemory) Get(key string) (data []byte, err error) {
 	return
 }
 
-func (e *inMemory) Put(key string, data []byte) error {
+// Put stores data against a key, else it returns an error
+func (e *Engine) Put(key string, data []byte) error {
 	storeLock.Lock()
 	defer storeLock.Unlock()
 
@@ -52,12 +57,12 @@ func (e *inMemory) Put(key string, data []byte) error {
 }
 
 // IsExpired checks to see if the key has expired
-func (e *inMemory) IsExpired(string) bool {
+func (e *Engine) IsExpired(string) bool {
 	return false
 }
 
 // Expire marks the key as expired, and removes it from the storage engine
-func (e *inMemory) Expire(key string) error {
+func (e *Engine) Expire(key string) error {
 	_, ok := e.store[key]
 	if !ok {
 		return common.ErrNonExistentKey
@@ -69,7 +74,8 @@ func (e *inMemory) Expire(key string) error {
 	return nil
 }
 
-func (e *inMemory) IsLocked(key string) bool {
+// IsLocked checks to see if the key has been locked
+func (e *Engine) IsLocked(key string) bool {
 	locksLock.RLock()
 	defer locksLock.RUnlock()
 
@@ -78,7 +84,8 @@ func (e *inMemory) IsLocked(key string) bool {
 	return ok
 }
 
-func (e *inMemory) Lock(key string) error {
+// Lock sets a lock against the given key
+func (e *Engine) Lock(key string) error {
 	if e.IsLocked(key) {
 		return common.ErrKeyAlreadyLocked
 	}
@@ -91,7 +98,8 @@ func (e *inMemory) Lock(key string) error {
 	return nil
 }
 
-func (e *inMemory) Unlock(key string) error {
+// Unlock removes the lock from a given key, if it doesn't exist it returns an error
+func (e *Engine) Unlock(key string) error {
 	_, ok := e.locks[key]
 	if !ok {
 		return common.ErrNonExistentKey

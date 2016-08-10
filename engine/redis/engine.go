@@ -12,7 +12,8 @@ type pl interface {
 	Get() redigo.Conn
 }
 
-type redisEngine struct {
+// Engine is the default Redis storage engine
+type Engine struct {
 	prefix string
 	pool   pl
 
@@ -24,15 +25,17 @@ var (
 	lockPrefix   = "lock:"
 )
 
-func NewRedisStore(prefix string, pool pl, cleanupTimeout time.Duration) *redisEngine {
-	return &redisEngine{
+// NewRedisStore creates a new standard Redis-backed store
+func NewRedisStore(prefix string, pool pl, cleanupTimeout time.Duration) *Engine {
+	return &Engine{
 		prefix:         prefix + ":",
 		pool:           pool,
 		cleanupTimeout: cleanupTimeout,
 	}
 }
 
-func (e *redisEngine) Exists(key string) bool {
+// Exists checks to see if a key exists in the store
+func (e *Engine) Exists(key string) bool {
 	conn := e.pool.Get()
 	defer conn.Close()
 
@@ -45,7 +48,8 @@ func (e *redisEngine) Exists(key string) bool {
 	return exists
 }
 
-func (e *redisEngine) Get(key string) (data []byte, err error) {
+// Get retrieves data from the store based on key, if it exists, else it returns an error
+func (e *Engine) Get(key string) (data []byte, err error) {
 	conn := e.pool.Get()
 	defer conn.Close()
 
@@ -57,7 +61,8 @@ func (e *redisEngine) Get(key string) (data []byte, err error) {
 	return
 }
 
-func (e *redisEngine) Put(key string, data []byte) error {
+// Put stores data against a key, else it returns an error
+func (e *Engine) Put(key string, data []byte) error {
 	conn := e.pool.Get()
 	defer conn.Close()
 
@@ -70,12 +75,12 @@ func (e *redisEngine) Put(key string, data []byte) error {
 }
 
 // IsExpired checks to see if the key has expired
-func (e *redisEngine) IsExpired(key string) bool {
+func (e *Engine) IsExpired(key string) bool {
 	return e.Exists(expirePrefix + key)
 }
 
 // Expire marks the key as expired, and removes it from the storage engine
-func (e *redisEngine) Expire(key string) error {
+func (e *Engine) Expire(key string) error {
 	conn := e.pool.Get()
 	defer conn.Close()
 
@@ -88,11 +93,13 @@ func (e *redisEngine) Expire(key string) error {
 	return err
 }
 
-func (e *redisEngine) IsLocked(key string) bool {
+// IsLocked checks to see if the key has been locked
+func (e *Engine) IsLocked(key string) bool {
 	return e.Exists(lockPrefix + key)
 }
 
-func (e *redisEngine) Lock(key string) error {
+// Lock sets a lock against the given key
+func (e *Engine) Lock(key string) error {
 	conn := e.pool.Get()
 	defer conn.Close()
 
@@ -100,7 +107,8 @@ func (e *redisEngine) Lock(key string) error {
 	return err
 }
 
-func (e *redisEngine) Unlock(key string) error {
+// Unlock removes the lock from a given key, if it doesn't exist it returns an error
+func (e *Engine) Unlock(key string) error {
 	conn := e.pool.Get()
 	defer conn.Close()
 
