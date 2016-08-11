@@ -94,7 +94,7 @@ func TestRedisEngine_Put(t *testing.T) {
 	expires := time.Now().Add(1 * time.Hour)
 
 	expectedErr := fmt.Errorf("Random error!")
-	cmd1 := fakeConn.Command("SETEX", "testing:new-key", content, cleanupTimeout.Seconds())
+	cmd1 := fakeConn.Command("SETEX", "testing:new-key", cleanupTimeout.Seconds(), content)
 	cmd2 := fakeConn.Command("SET", "testing:expire:new-key", expires.Unix())
 	cmd3 := fakeConn.Command("EXEC").Expect([]interface{}{"OK", "OK"}).ExpectError(expectedErr)
 
