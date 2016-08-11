@@ -5,7 +5,6 @@ import (
 
 	"github.com/fresh8/go-cache/engine/common"
 	redigo "github.com/garyburd/redigo/redis"
-	//"log"
 )
 
 type pl interface {
@@ -62,13 +61,14 @@ func (e *Engine) Get(key string) (data []byte, err error) {
 }
 
 // Put stores data against a key, else it returns an error
-func (e *Engine) Put(key string, data []byte) error {
+func (e *Engine) Put(key string, data []byte, expires time.Time) error {
 	conn := e.pool.Get()
 	defer conn.Close()
 
 	// Pipeline commands
-	conn.Send("SETEX", e.prefix+key, data, e.cleanupTimeout.Seconds())
-	conn.Send("SET", e.prefix+expirePrefix+key, 1)
+	conn.Send("MULTI")
+	conn.Send("SETEX", e.prefix+key, e.cleanupTimeout.Seconds(), data)
+	conn.Send("SET", e.prefix+expirePrefix+key, expires.Unix())
 	_, err := conn.Do("EXEC")
 
 	return err
@@ -76,7 +76,22 @@ func (e *Engine) Put(key string, data []byte) error {
 
 // IsExpired checks to see if the key has expired
 func (e *Engine) IsExpired(key string) bool {
-	return e.Exists(expirePrefix + key)
+	if e.Exists(expirePrefix + key) {
+		conn := e.pool.Get()
+		defer conn.Close()
+
+		expiryTime, err := redigo.Int64(conn.Do("GET", e.prefix+expirePrefix+key))
+		// TODO: Handle this error properly
+		if err != nil {
+			return false
+		}
+
+		if time.Now().Unix() > expiryTime {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Expire marks the key as expired, and removes it from the storage engine
@@ -85,6 +100,7 @@ func (e *Engine) Expire(key string) error {
 	defer conn.Close()
 
 	// Pipeline commands
+	conn.Send("MULTI")
 	conn.Send("DEL", e.prefix+key)
 	conn.Send("DEL", e.prefix+expirePrefix+key)
 	conn.Send("DEL", e.prefix+lockPrefix+key)

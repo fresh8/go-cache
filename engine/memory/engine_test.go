@@ -3,6 +3,7 @@ package memory
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/fresh8/go-cache/engine/common"
 )
@@ -78,7 +79,7 @@ func TestInMemory_Put(t *testing.T) {
 
 	memStore := NewMemoryStore()
 
-	err := memStore.Put("new-key", content)
+	err := memStore.Put("new-key", content, time.Now().Add(1*time.Hour))
 	if err != nil {
 		t.Fatalf("no error expected, %s given", err)
 	}
