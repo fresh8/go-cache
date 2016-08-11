@@ -16,22 +16,16 @@ type cacher struct {
 
 // Cacher defines the interface for a caching system so it can be customised.
 type Cacher interface {
-	Setup(common.Engine)
 	Get(string, time.Time, func() []byte) ([]byte, error)
 	Expire(string) error
 }
 
 // NewCacher creates a new generic cacher with the given engine.
-func NewCacher(engine common.Engine) Cacher {
+func NewCacher(engine common.Engine, maxQueueSize int, maxWorkers int) Cacher {
 	return cacher{
 		engine:   engine,
-		jobQueue: joque.Setup(5, 5),
+		jobQueue: joque.Setup(maxQueueSize, maxWorkers),
 	}
-}
-
-// Setup performs the initial actions to set the cacher up
-func (c cacher) Setup(engine common.Engine) {
-	c.engine = engine
 }
 
 func (c cacher) Get(key string, expires time.Time, regenerate func() []byte) (data []byte, err error) {

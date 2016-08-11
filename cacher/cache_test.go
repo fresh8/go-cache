@@ -10,13 +10,9 @@ import (
 
 // TODO: This should be replaced by a mock, not use memory engine
 
-func TestCacher_Setup(t *testing.T) {
-	t.Skip()
-}
-
 func TestCacher_Get(t *testing.T) {
 	e := engine.NewMemoryStore()
-	cache := NewCacher(e)
+	cache := NewCacher(e, 5, 5)
 	count := 0
 	content := []byte("hello")
 	regenerate := func() []byte {
