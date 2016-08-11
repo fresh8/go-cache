@@ -66,6 +66,7 @@ func (e *Engine) Put(key string, data []byte, expires time.Time) error {
 	defer conn.Close()
 
 	// Pipeline commands
+	conn.Send("MULTI")
 	conn.Send("SETEX", e.prefix+key, e.cleanupTimeout.Seconds(), data)
 	conn.Send("SET", e.prefix+expirePrefix+key, expires.Unix())
 	_, err := conn.Do("EXEC")
@@ -99,6 +100,7 @@ func (e *Engine) Expire(key string) error {
 	defer conn.Close()
 
 	// Pipeline commands
+	conn.Send("MULTI")
 	conn.Send("DEL", e.prefix+key)
 	conn.Send("DEL", e.prefix+expirePrefix+key)
 	conn.Send("DEL", e.prefix+lockPrefix+key)

@@ -94,6 +94,7 @@ func TestRedisEngine_Put(t *testing.T) {
 	expires := time.Now().Add(1 * time.Hour)
 
 	expectedErr := fmt.Errorf("Random error!")
+	cmd := fakeConn.Command("MULTI")
 	cmd1 := fakeConn.Command("SETEX", "testing:new-key", cleanupTimeout.Seconds(), content)
 	cmd2 := fakeConn.Command("SET", "testing:expire:new-key", expires.Unix())
 	cmd3 := fakeConn.Command("EXEC").Expect([]interface{}{"OK", "OK"}).ExpectError(expectedErr)
@@ -101,6 +102,10 @@ func TestRedisEngine_Put(t *testing.T) {
 	err := engine.Put("new-key", []byte("hello"), expires)
 	if err != nil {
 		t.Fatalf("no error expected, %s given", err)
+	}
+
+	if fakeConn.Stats(cmd) != 1 {
+		t.Fatal("multi command was not used")
 	}
 
 	if fakeConn.Stats(cmd1) != 1 {
@@ -183,6 +188,7 @@ func TestRedisEngine_Expire(t *testing.T) {
 	}, 1*time.Minute)
 
 	expectedErr := fmt.Errorf("Random error!")
+	cmd := fakeConn.Command("MULTI")
 	cmd1 := fakeConn.Command("DEL", "testing:remove-key")
 	cmd2 := fakeConn.Command("DEL", "testing:expire:remove-key")
 	cmd3 := fakeConn.Command("DEL", "testing:lock:remove-key")
@@ -191,6 +197,10 @@ func TestRedisEngine_Expire(t *testing.T) {
 	err := engine.Expire("remove-key")
 	if err != nil {
 		t.Fatalf("no error expected, %s given", err)
+	}
+
+	if fakeConn.Stats(cmd) != 1 {
+		t.Fatal("multi key command was not used")
 	}
 
 	if fakeConn.Stats(cmd1) != 1 {
