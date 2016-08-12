@@ -74,10 +74,8 @@ func (d *Dispatcher) dispatch() {
 	for {
 		select {
 		case job := <-d.jobQueue:
-			go func() {
-				workerJobQueue := <-d.workerPool
-				workerJobQueue <- job
-			}()
+			workerJobQueue := <-d.workerPool
+			workerJobQueue <- job
 		}
 	}
 }
