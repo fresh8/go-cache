@@ -14,7 +14,7 @@ type cacher struct {
 
 // Cacher defines the interface for a caching system so it can be customised.
 type Cacher interface {
-	Get(string, time.Time, func() []byte) ([]byte, error)
+	Get(string, time.Time, func() ([]byte, error)) func() ([]byte, error)
 	Expire(string) error
 }
 
@@ -26,7 +26,7 @@ func NewCacher(engine common.Engine, maxQueueSize int, maxWorkers int) Cacher {
 	}
 }
 
-func (c cacher) Get(key string, expires time.Time, regenerate func() []byte) (data []byte, err error) {
+func (c cacher) get(key string, expires time.Time, regenerate func() ([]byte, error)) (data []byte, err error) {
 	if c.engine.Exists(key) {
 		data, err = c.engine.Get(key)
 
@@ -50,17 +50,37 @@ func (c cacher) Get(key string, expires time.Time, regenerate func() []byte) (da
 			c.engine.Lock(key)
 			defer c.engine.Unlock(key)
 
-			data = regenerate()
+			data, err = regenerate()
 			c.engine.Put(key, data, expires)
 		}
 		return
 	}
 
 	// If the key doesn't exist, generate it now and return
-	data = regenerate()
+	data, err = regenerate()
+	if err != nil {
+		return
+	}
+
 	err = c.engine.Put(key, data, expires)
 
 	return
+}
+
+func (c cacher) Get(key string, expires time.Time, regenerate func() ([]byte, error)) func() ([]byte, error) {
+	var data []byte
+	var err error
+
+	ch := make(chan struct{}, 1)
+	go func() {
+		defer close(ch)
+		data, err = c.get(key, expires, regenerate)
+	}()
+
+	return func() ([]byte, error) {
+		<-ch
+		return data, err
+	}
 }
 
 // Expire the given key within the cache engine

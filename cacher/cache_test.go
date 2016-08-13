@@ -15,12 +15,12 @@ func TestCacher_Get(t *testing.T) {
 	cache := NewCacher(e, 5, 5)
 	count := 0
 	content := []byte("hello")
-	regenerate := func() []byte {
+	regenerate := func() ([]byte, error) {
 		count = count + 1
-		return content
+		return content, nil
 	}
 
-	data, err := cache.Get("existing", time.Now().Add(1*time.Minute), regenerate)
+	data, err := cache.Get("existing", time.Now().Add(1*time.Minute), regenerate)()
 	if err != nil {
 		t.Fatalf("no error expected, %s given", err)
 	}
@@ -33,7 +33,7 @@ func TestCacher_Get(t *testing.T) {
 		t.Fatalf("data expected to be different, %s expected, %s given", content, data)
 	}
 
-	data, err = cache.Get("existing", time.Now().Add(1*time.Minute), regenerate)
+	data, err = cache.Get("existing", time.Now().Add(1*time.Minute), regenerate)()
 	if bytes.Compare(data, content) != 0 {
 		t.Fatalf("data expected to be different, %s expected, %s given", content, data)
 	}
@@ -45,10 +45,10 @@ func TestCacher_Get(t *testing.T) {
 	e.Expire("existing")
 
 	newContent := append(content, []byte("-world")...)
-	data, err = cache.Get("existing", time.Now().Add(1*time.Minute), func() []byte {
+	data, err = cache.Get("existing", time.Now().Add(1*time.Minute), func() ([]byte, error) {
 		count = count + 1
-		return newContent
-	})
+		return newContent, nil
+	})()
 
 	if bytes.Compare(data, newContent) != 0 {
 		t.Fatalf("data expected to be different, %s expected, %s given", newContent, data)
