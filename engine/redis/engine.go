@@ -68,7 +68,7 @@ func (e *Engine) Put(key string, data []byte, expires time.Time) error {
 	// Pipeline commands
 	conn.Send("MULTI")
 	conn.Send("SETEX", e.prefix+key, e.cleanupTimeout.Seconds(), data)
-	conn.Send("SET", e.prefix+expirePrefix+key, expires.Unix())
+	conn.Send("SETEX", e.prefix+expirePrefix+key, e.cleanupTimeout.Seconds(), expires.Unix())
 	_, err := conn.Do("EXEC")
 
 	return err
@@ -119,7 +119,7 @@ func (e *Engine) Lock(key string) error {
 	conn := e.pool.Get()
 	defer conn.Close()
 
-	_, err := conn.Do("SET", e.prefix+lockPrefix+key, []byte("1"))
+	_, err := conn.Do("SETEX", e.prefix+lockPrefix+key, e.cleanupTimeout.Seconds(), []byte("1"))
 	return err
 }
 
