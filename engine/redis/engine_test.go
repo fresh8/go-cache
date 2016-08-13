@@ -96,7 +96,7 @@ func TestRedisEngine_Put(t *testing.T) {
 	expectedErr := fmt.Errorf("Random error!")
 	cmd := fakeConn.Command("MULTI")
 	cmd1 := fakeConn.Command("SETEX", "testing:new-key", cleanupTimeout.Seconds(), content)
-	cmd2 := fakeConn.Command("SET", "testing:expire:new-key", expires.Unix())
+	cmd2 := fakeConn.Command("SETEX", "testing:expire:new-key", cleanupTimeout.Seconds(), expires.Unix())
 	cmd3 := fakeConn.Command("EXEC").Expect([]interface{}{"OK", "OK"}).ExpectError(expectedErr)
 
 	err := engine.Put("new-key", []byte("hello"), expires)
@@ -113,7 +113,7 @@ func TestRedisEngine_Put(t *testing.T) {
 	}
 
 	if fakeConn.Stats(cmd2) != 1 {
-		t.Fatal("set command was not used")
+		t.Fatal("setex command was not used")
 	}
 
 	if fakeConn.Stats(cmd3) != 1 {
@@ -261,12 +261,13 @@ func TestRedisEngine_IsLocked(t *testing.T) {
 
 func TestRedisEngine_Lock(t *testing.T) {
 	fakeConn := redigomock.NewConn()
+	cleanupTimeout := 1 * time.Minute
 	engine := NewRedisStore("testing", &mockPool{
 		conn: fakeConn,
-	}, 1*time.Minute)
+	}, cleanupTimeout)
 
 	expectedErr := fmt.Errorf("Random error!")
-	cmd1 := fakeConn.Command("SET", "testing:lock:lock-key", []byte("1")).Expect("OK").ExpectError(expectedErr)
+	cmd1 := fakeConn.Command("SETEX", "testing:lock:lock-key",cleanupTimeout.Seconds(), []byte("1")).Expect("OK").ExpectError(expectedErr)
 
 	err := engine.Lock("lock-key")
 	if err != nil {
