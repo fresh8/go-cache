@@ -68,7 +68,7 @@ func (e *Engine) Put(key string, data []byte, expiry time.Time) error {
 // IsExpired checks to see if the key has expired
 func (e *Engine) IsExpired(key string) bool {
 	if time.Now().After(e.expire[key]) {
-		e.Expire(key)
+		go e.Expire(key)
 		return true
 	}
 	return false
