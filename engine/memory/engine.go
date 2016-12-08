@@ -9,8 +9,10 @@ import (
 
 // Engine is the default memory storage engine
 type Engine struct {
-	store map[string][]byte
-	locks map[string]bool
+	store      map[string][]byte
+	expire     map[string]time.Time
+	locks      map[string]bool
+	expirePoll time.Duration
 }
 
 var (
@@ -20,11 +22,16 @@ var (
 )
 
 // NewMemoryStore creates a new standard in memory store
-func NewMemoryStore() *Engine {
-	return &Engine{
-		store: make(map[string][]byte),
-		locks: make(map[string]bool),
+func NewMemoryStore(expirePoll time.Duration) *Engine {
+	e := &Engine{
+		store:      make(map[string][]byte),
+		locks:      make(map[string]bool),
+		expire:     make(map[string]time.Time),
+		expirePoll: expirePoll,
 	}
+	//Start cleanup poll
+	e.cleanupExpiredKeys()
+	return e
 }
 
 // Exists checks to see if a key exists in the store
@@ -53,12 +60,17 @@ func (e *Engine) Put(key string, data []byte, expiry time.Time) error {
 	defer storeLock.Unlock()
 
 	e.store[key] = data
+	e.expire[key] = expiry
 
 	return nil
 }
 
 // IsExpired checks to see if the key has expired
-func (e *Engine) IsExpired(string) bool {
+func (e *Engine) IsExpired(key string) bool {
+	if time.Now().After(e.expire[key]) {
+		e.Expire(key)
+		return true
+	}
 	return false
 }
 
@@ -70,6 +82,7 @@ func (e *Engine) Expire(key string) error {
 	}
 
 	delete(e.store, key)
+	delete(e.expire, key)
 	e.Unlock(key)
 
 	return nil
@@ -112,4 +125,17 @@ func (e *Engine) Unlock(key string) error {
 	delete(e.locks, key)
 
 	return nil
+}
+
+//Polls the keys to see if they have expired
+//re-checks after a period of time
+func (e *Engine) cleanupExpiredKeys() {
+	go func() {
+		for range time.Tick(e.expirePoll) {
+			for k := range e.expire {
+				//If the key has expired it will be cleared by this call
+				e.IsExpired(k)
+			}
+		}
+	}()
 }
