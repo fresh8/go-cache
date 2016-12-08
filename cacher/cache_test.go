@@ -11,7 +11,7 @@ import (
 // TODO: This should be replaced by a mock, not use memory engine
 
 func TestCacher_Get(t *testing.T) {
-	e := engine.NewMemoryStore()
+	e := engine.NewMemoryStore(time.Second * 60)
 	cache := NewCacher(e, 5, 5)
 	count := 0
 	content := []byte("hello")
