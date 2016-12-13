@@ -1,3 +1,5 @@
+//go:generate goautomock -o=../mock/engine_mock.go Engine
+
 package common
 
 import (

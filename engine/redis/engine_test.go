@@ -159,8 +159,9 @@ func TestRedisEngine_IsExpired(t *testing.T) {
 
 	fakeConn.Clear()
 
-	cmd4 := fakeConn.Command("EXISTS", "testing:expire:existing").Expect([]byte("true"))
-	cmd5 := fakeConn.Command("GET", "testing:expire:existing").Expect(time.Now().Add(-1 * time.Minute).Unix())
+	expectedErr := fmt.Errorf("Random error!")
+	cmd4 := fakeConn.Command("EXISTS", "testing:expire:existing").Expect([]byte("true")).Expect([]byte("true"))
+	cmd5 := fakeConn.Command("GET", "testing:expire:existing").Expect(time.Now().Add(-1 * time.Minute).Unix()).ExpectError(expectedErr)
 	if !engine.IsExpired("existing") {
 		t.Fatal("key exist, marked as non-existent")
 	}
@@ -173,9 +174,13 @@ func TestRedisEngine_IsExpired(t *testing.T) {
 		t.Fatal("get command was not used")
 	}
 
+	if engine.IsExpired("existing") {
+		t.Fatal("get should have thrown an error, returning false")
+	}
+
 	fakeConn.Clear()
 
-	fakeConn.Command("EXISTS", "testing:expire:existing").ExpectError(fmt.Errorf("Random error!"))
+	fakeConn.Command("EXISTS", "testing:expire:existing").ExpectError(expectedErr)
 	if engine.IsExpired("existing") {
 		t.Fatal("error for existing should return false")
 	}

@@ -1,3 +1,5 @@
+//go:generate goautomock -o=../mock/cacher_mock.go Cacher
+
 package cacher
 
 import (
