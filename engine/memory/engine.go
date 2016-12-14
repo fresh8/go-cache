@@ -82,13 +82,13 @@ func (e *Engine) IsExpired(key string) bool {
 
 // Expire marks the key as expired, and removes it from the storage engine
 func (e *Engine) Expire(key string) error {
-	_, ok := e.store[key]
-	if !ok {
+	if !e.Exists(key) {
 		return common.ErrNonExistentKey
 	}
-
+	storeLock.Lock()
 	delete(e.store, key)
 	delete(e.expire, key)
+	storeLock.Unlock()
 	e.Unlock(key)
 
 	return nil
@@ -145,8 +145,8 @@ func (e *Engine) cleanupExpiredKeys() {
 }
 
 func (e *Engine) copyExpiredKeys() []string {
-	storeLock.RLock()
-	defer storeLock.RUnlock()
+	storeLock.Lock()
+	defer storeLock.Unlock()
 	keys := make([]string, len(e.expire))
 	i := 0
 	for k := range e.expire {
