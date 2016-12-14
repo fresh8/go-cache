@@ -272,3 +272,58 @@ func TestInMemory_PollExpire(t *testing.T) {
 		t.Fatalf("expire length should be 0 after expiring, %d given", len(memStore.expire))
 	}
 }
+
+func TestInMemory_copyExpiredKeys(t *testing.T) {
+	content := []byte("hello")
+	memStore := NewMemoryStore(time.Second * 1)
+
+	err := memStore.Put("new-key", content, time.Now().Add(1*time.Hour))
+	if err != nil {
+		t.Fatalf("no error expected, %s given", err)
+	}
+
+	for _, k := range memStore.copyExpiredKeys() {
+		if !memStore.Exists(k) {
+			t.Fatalf("no error expected, %s given", err)
+		}
+	}
+
+}
+
+func TestInMemory_processExpiredKeys(t *testing.T) {
+	content := []byte("hello")
+
+	memStore := NewMemoryStore(time.Second * 1)
+
+	err := memStore.Expire("existing")
+	if err != common.ErrNonExistentKey {
+		t.Fatalf("key does not exist, should return error")
+	}
+
+	memStore.store["existing"] = content
+	memStore.locks["existing"] = true
+	memStore.expire["existing"] = time.Now()
+
+	//Wait until the cleanup poll has passed
+	time.After(time.Second * 1)
+
+	//Run process to expire keys
+	memStore.processExpiredKeys()
+
+	err = memStore.Expire("existing")
+	if err != nil {
+		t.Fatalf("no error expected, %s given", err)
+	}
+
+	if len(memStore.store) != 0 {
+		t.Fatalf("store length should be 0 after expiring, %d given", len(memStore.store))
+	}
+
+	if len(memStore.locks) != 0 {
+		t.Fatalf("locks length should be 0 after expiring, %d given", len(memStore.locks))
+	}
+
+	if len(memStore.expire) != 0 {
+		t.Fatalf("expire length should be 0 after expiring, %d given", len(memStore.expire))
+	}
+}
