@@ -13,10 +13,10 @@ type Engine struct {
 	expire     map[string]time.Time
 	locks      map[string]bool
 	expirePoll time.Duration
+	storeLock  sync.RWMutex
 }
 
 var (
-	storeLock sync.RWMutex
 	// TODO: Better name needed =|
 	locksLock sync.RWMutex
 )
@@ -36,16 +36,16 @@ func NewMemoryStore(expirePoll time.Duration) *Engine {
 
 // Exists checks to see if a key exists in the store
 func (e *Engine) Exists(key string) bool {
-	storeLock.RLock()
-	defer storeLock.RUnlock()
+	e.storeLock.RLock()
+	defer e.storeLock.RUnlock()
 	_, ok := e.store[key]
 	return ok
 }
 
 // Get retrieves data from the store based on key, if it exists, else it returns an error
 func (e *Engine) Get(key string) (data []byte, err error) {
-	storeLock.RLock()
-	defer storeLock.RUnlock()
+	e.storeLock.RLock()
+	defer e.storeLock.RUnlock()
 
 	if !e.Exists(key) {
 		err = common.ErrNonExistentKey
@@ -58,8 +58,8 @@ func (e *Engine) Get(key string) (data []byte, err error) {
 
 // Put stores data against a key, else it returns an error
 func (e *Engine) Put(key string, data []byte, expiry time.Time) error {
-	storeLock.Lock()
-	defer storeLock.Unlock()
+	e.storeLock.Lock()
+	defer e.storeLock.Unlock()
 
 	e.store[key] = data
 	e.expire[key] = expiry
@@ -69,9 +69,9 @@ func (e *Engine) Put(key string, data []byte, expiry time.Time) error {
 
 // IsExpired checks to see if the key has expired
 func (e *Engine) IsExpired(key string) bool {
-	storeLock.RLock()
+	e.storeLock.RLock()
 	expireTime := e.expire[key]
-	storeLock.RUnlock()
+	e.storeLock.RUnlock()
 
 	if time.Now().After(expireTime) && !e.IsLocked(key) {
 		e.Expire(key)
@@ -85,10 +85,10 @@ func (e *Engine) Expire(key string) error {
 	if !e.Exists(key) {
 		return common.ErrNonExistentKey
 	}
-	storeLock.Lock()
+	e.storeLock.Lock()
 	delete(e.store, key)
 	delete(e.expire, key)
-	storeLock.Unlock()
+	e.storeLock.Unlock()
 	e.Unlock(key)
 
 	return nil
@@ -145,8 +145,8 @@ func (e *Engine) cleanupExpiredKeys() {
 }
 
 func (e *Engine) copyExpiredKeys() []string {
-	storeLock.Lock()
-	defer storeLock.Unlock()
+	e.storeLock.RLock()
+	defer e.storeLock.RUnlock()
 	keys := make([]string, len(e.expire))
 	i := 0
 	for k := range e.expire {
