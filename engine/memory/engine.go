@@ -145,7 +145,7 @@ func (e *Engine) cleanupExpiredKeys() {
 }
 
 func (e *Engine) copyExpiredKeys() []string {
-    storeLock.RLock()
+	storeLock.RLock()
 	defer storeLock.RUnlock()
 	keys := make([]string, len(e.expire))
 	i := 0
