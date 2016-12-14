@@ -36,6 +36,8 @@ func NewMemoryStore(expirePoll time.Duration) *Engine {
 
 // Exists checks to see if a key exists in the store
 func (e *Engine) Exists(key string) bool {
+	storeLock.RLock()
+	defer storeLock.RUnlock()
 	_, ok := e.store[key]
 	return ok
 }
@@ -67,8 +69,12 @@ func (e *Engine) Put(key string, data []byte, expiry time.Time) error {
 
 // IsExpired checks to see if the key has expired
 func (e *Engine) IsExpired(key string) bool {
-	if time.Now().After(e.expire[key]) {
-		go e.Expire(key)
+	storeLock.RLock()
+	expireTime := e.expire[key]
+	storeLock.RUnlock()
+
+	if time.Now().After(expireTime) && !e.IsLocked(key) {
+		e.Expire(key)
 		return true
 	}
 	return false
@@ -131,11 +137,32 @@ func (e *Engine) Unlock(key string) error {
 //re-checks after a period of time
 func (e *Engine) cleanupExpiredKeys() {
 	go func() {
-		for range time.Tick(e.expirePoll) {
-			for k := range e.expire {
-				//If the key has expired it will be cleared by this call
-				e.IsExpired(k)
-			}
+		for {
+			<-time.After(e.expirePoll)
+			e.processExpiredKeys()
 		}
 	}()
+}
+
+func (e *Engine) copyExpiredKeys() []string {
+	locksLock.RLock()
+	defer locksLock.RUnlock()
+	keys := make([]string, len(e.expire))
+	i := 0
+	for k := range e.expire {
+		keys[i] = k
+		i++
+	}
+	return keys
+}
+
+func (e *Engine) processExpiredKeys() {
+	for _, k := range e.copyExpiredKeys() {
+		// Need to check if the key is the key exists and is not locked before checkign if
+		// the key is expired.
+		if !e.Exists(k) && !e.IsLocked(k) {
+			//This check will expire a key if the key has expired
+			e.IsExpired(k)
+		}
+	}
 }
