@@ -13,10 +13,10 @@ type Engine struct {
 	expire     map[string]time.Time
 	locks      map[string]bool
 	expirePoll time.Duration
+	storeLock  sync.RWMutex
 }
 
 var (
-	storeLock sync.RWMutex
 	// TODO: Better name needed =|
 	locksLock sync.RWMutex
 )
@@ -36,14 +36,16 @@ func NewMemoryStore(expirePoll time.Duration) *Engine {
 
 // Exists checks to see if a key exists in the store
 func (e *Engine) Exists(key string) bool {
+	e.storeLock.RLock()
+	defer e.storeLock.RUnlock()
 	_, ok := e.store[key]
 	return ok
 }
 
 // Get retrieves data from the store based on key, if it exists, else it returns an error
 func (e *Engine) Get(key string) (data []byte, err error) {
-	storeLock.RLock()
-	defer storeLock.RUnlock()
+	e.storeLock.RLock()
+	defer e.storeLock.RUnlock()
 
 	if !e.Exists(key) {
 		err = common.ErrNonExistentKey
@@ -56,8 +58,8 @@ func (e *Engine) Get(key string) (data []byte, err error) {
 
 // Put stores data against a key, else it returns an error
 func (e *Engine) Put(key string, data []byte, expiry time.Time) error {
-	storeLock.Lock()
-	defer storeLock.Unlock()
+	e.storeLock.Lock()
+	defer e.storeLock.Unlock()
 
 	e.store[key] = data
 	e.expire[key] = expiry
@@ -67,8 +69,12 @@ func (e *Engine) Put(key string, data []byte, expiry time.Time) error {
 
 // IsExpired checks to see if the key has expired
 func (e *Engine) IsExpired(key string) bool {
-	if time.Now().After(e.expire[key]) {
-		go e.Expire(key)
+	e.storeLock.RLock()
+	expireTime := e.expire[key]
+	e.storeLock.RUnlock()
+
+	if time.Now().After(expireTime) && !e.IsLocked(key) {
+		e.Expire(key)
 		return true
 	}
 	return false
@@ -76,13 +82,13 @@ func (e *Engine) IsExpired(key string) bool {
 
 // Expire marks the key as expired, and removes it from the storage engine
 func (e *Engine) Expire(key string) error {
-	_, ok := e.store[key]
-	if !ok {
+	if !e.Exists(key) {
 		return common.ErrNonExistentKey
 	}
-
+	e.storeLock.Lock()
 	delete(e.store, key)
 	delete(e.expire, key)
+	e.storeLock.Unlock()
 	e.Unlock(key)
 
 	return nil
@@ -131,11 +137,32 @@ func (e *Engine) Unlock(key string) error {
 //re-checks after a period of time
 func (e *Engine) cleanupExpiredKeys() {
 	go func() {
-		for range time.Tick(e.expirePoll) {
-			for k := range e.expire {
-				//If the key has expired it will be cleared by this call
-				e.IsExpired(k)
-			}
+		for {
+			<-time.After(e.expirePoll)
+			e.processExpiredKeys()
 		}
 	}()
+}
+
+func (e *Engine) copyExpiredKeys() []string {
+	e.storeLock.RLock()
+	defer e.storeLock.RUnlock()
+	keys := make([]string, len(e.expire))
+	i := 0
+	for k := range e.expire {
+		keys[i] = k
+		i++
+	}
+	return keys
+}
+
+func (e *Engine) processExpiredKeys() {
+	for _, k := range e.copyExpiredKeys() {
+		// Need to check if the key is the key exists and is not locked before checkign if
+		// the key is expired.
+		if !e.Exists(k) && !e.IsLocked(k) {
+			//This check will expire a key if the key has expired
+			e.IsExpired(k)
+		}
+	}
 }
