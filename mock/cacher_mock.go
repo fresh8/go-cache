@@ -3,14 +3,13 @@
 * THIS FILE SHOULD NOT BE EDITED BY HAND
  */
 
-package cacher
+package mock
 
 import (
 	"fmt"
-	mock "github.com/stretchr/testify/mock"
+	"time"
 
-	common "github.com/fresh8/go-cache/engine/common"
-	time "time"
+	mock "github.com/stretchr/testify/mock"
 )
 
 // CacherMock mock
@@ -37,35 +36,19 @@ func (m *CacherMock) Expire(p0 string) error {
 }
 
 // Get mocked method
-func (m *CacherMock) Get(p0 string, p1 time.Time, p2 func() []byte) ([]byte, error) {
+func (m *CacherMock) Get(p0 string, p1 time.Time, p2 func() ([]byte, error)) func() ([]byte, error) {
 
 	ret := m.Called(p0, p1, p2)
 
-	var r0 []byte
+	var r0 func() ([]byte, error)
 	switch res := ret.Get(0).(type) {
 	case nil:
-	case []byte:
+	case func() ([]byte, error):
 		r0 = res
 	default:
 		panic(fmt.Sprintf("unexpected type: %v", res))
 	}
 
-	var r1 error
-	switch res := ret.Get(1).(type) {
-	case nil:
-	case error:
-		r1 = res
-	default:
-		panic(fmt.Sprintf("unexpected type: %v", res))
-	}
-
-	return r0, r1
-
-}
-
-// Setup mocked method
-func (m *CacherMock) Setup(p0 common.Engine) {
-
-	m.Called(p0)
+	return r0
 
 }
