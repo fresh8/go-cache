@@ -1,4 +1,5 @@
-//go:generate goautomock -o=../mock/engine_mock.go Engine
+//go:generate moq -out ./engine_mock.go . Engine
+//go:generate goimports -w ./engine_mock.go
 
 package common
 

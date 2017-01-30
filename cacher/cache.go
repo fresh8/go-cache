@@ -1,4 +1,5 @@
-//go:generate goautomock -o=../mock/cacher_mock.go Cacher
+//go:generate moq -out ./cacher_mock.go . Cacher
+//go:generate goimports -w ./cacher_mock.go
 
 package cacher
 
