@@ -1,3 +1,6 @@
+//go:generate moq -out ../mock/cacher_mock.go . Cacher
+//go:generate goimports -w ../mock/cacher_mock.go
+
 package cacher
 
 import (
@@ -11,9 +14,6 @@ type cacher struct {
 	engine   common.Engine
 	jobQueue chan joque.Job
 }
-
-//go:generate moq -out ../mock/cacher_mock.go . Cacher
-//go:generate goimports -w ../mock/cacher_mock.go
 
 // Cacher defines the interface for a caching system so it can be customised.
 type Cacher interface {

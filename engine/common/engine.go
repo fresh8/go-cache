@@ -1,12 +1,12 @@
+//go:generate moq -out ../mock/engine_mock.go . Engine
+//go:generate goimports -w ../mock/engine_mock.go
+
 package common
 
 import (
 	"errors"
 	"time"
 )
-
-//go:generate moq -out ../mock/engine_mock.go . Engine
-//go:generate goimports -w ../mock/engine_mock.go
 
 // Engine is the interface all caching engines must adhere to
 type Engine interface {
