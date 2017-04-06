@@ -29,6 +29,10 @@ func NewRedisRingEngine(
 		return nil, errors.New("nil ringOpts passed to NewRedisRingEngine")
 	}
 
+	if len(ringOpts.Addrs) == 0 {
+		return nil, errors.New("redisring options must have 1 or more addresses")
+	}
+
 	return &Engine{
 		prefix:         prefix + ":",
 		ring:           redis.NewRing(ringOpts),
