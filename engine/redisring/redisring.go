@@ -24,21 +24,17 @@ const lockPrefix = "lock:"
 // NewRedisRingEngine creates a new redis ring for use as a store
 func NewRedisRingEngine(
 	prefix string,
-	ringOpts *redis.RingOptions,
+	ring *redis.Ring,
 	cleanupTimeout time.Duration,
 	shouldLogErrors bool,
 ) (*Engine, error) {
-	if ringOpts == nil {
-		return nil, errors.New("nil ringOpts passed to NewRedisRingEngine")
-	}
-
-	if len(ringOpts.Addrs) == 0 {
-		return nil, errors.New("redisring options must have 1 or more addresses")
+	if ring == nil {
+		return nil, errors.New("nil ring passed to NewRedisRingEngine")
 	}
 
 	return &Engine{
 		prefix:          prefix + ":",
-		ring:            redis.NewRing(ringOpts),
+		ring:            ring,
 		cleanupTimeout:  cleanupTimeout,
 		shouldLogErrors: shouldLogErrors,
 	}, nil
@@ -99,7 +95,7 @@ func (e *Engine) Put(key string, data []byte, expires time.Time) error {
 	}
 
 	expireKey := e.getExpireKey(key)
-	expireCmd := e.ring.Set(expireKey, data, e.cleanupTimeout)
+	expireCmd := e.ring.Set(expireKey, expires.Unix(), e.cleanupTimeout)
 	err = expireCmd.Err()
 	if err != nil {
 		return errors.Wrap(err, "attempting to set expire key "+expireKey)
