@@ -200,6 +200,10 @@ func (e *Engine) Expire(key string) error {
 
 // helper function that checks to see if a valid ring exists on the engine
 func (e *Engine) hasRing(method string) error {
+	if e.ring != nil {
+		return nil
+	}
+
 	err := errors.New(method + ": nil ring in redisring engine")
 	if e.shouldLogErrors {
 		log.Println(err.Error())
