@@ -1,6 +1,7 @@
 package redisring
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -50,10 +51,12 @@ func (e *Engine) Exists(key string) bool {
 		return false
 	}
 
-	cmd := e.ring.Exists(e.prefix + key)
+	k := e.prefix + key
+	cmd := e.ring.Exists(k)
 	result, err := cmd.Result()
 	if err != nil {
 		if e.shouldLogErrors {
+			err = errors.Wrap(err, "attempting to check key exists "+k)
 			log.Println(err.Error())
 		}
 		return false
@@ -69,10 +72,11 @@ func (e *Engine) Get(key string) ([]byte, error) {
 		return nil, err
 	}
 
-	cmd := e.ring.Get(e.prefix + key)
+	k := e.prefix + key
+	cmd := e.ring.Get(k)
 	result, err := cmd.Bytes()
 	if err != nil {
-		return nil, errors.Wrap(err, "attempting to get") // TODO add key
+		return nil, errors.Wrap(err, "attempting to get "+k)
 	}
 
 	return result, nil
@@ -87,16 +91,18 @@ func (e *Engine) Put(key string, data []byte, expires time.Time) error {
 		return err
 	}
 
-	dataCmd := e.ring.Set(e.prefix+key, data, e.cleanupTimeout)
+	dataKey := e.prefix + key
+	dataCmd := e.ring.Set(dataKey, data, e.cleanupTimeout)
 	err = dataCmd.Err()
 	if err != nil {
-		return errors.Wrap(err, "attempting to set data") // TODO add key
+		return errors.Wrap(err, "attempting to set data for "+dataKey)
 	}
 
-	expireCmd := e.ring.Set(e.prefix+expirePrefix+key, data, e.cleanupTimeout)
+	expireKey := e.getExpireKey(key)
+	expireCmd := e.ring.Set(expireKey, data, e.cleanupTimeout)
 	err = expireCmd.Err()
 	if err != nil {
-		return errors.Wrap(err, "attempting to set expire key") // TODO add key
+		return errors.Wrap(err, "attempting to set expire key "+expireKey)
 	}
 
 	return nil
@@ -110,12 +116,13 @@ func (e *Engine) IsExpired(key string) bool {
 	}
 
 	if e.Exists(expirePrefix + key) {
-		k := e.prefix + expirePrefix + key
+		k := e.getExpireKey(key)
 		cmd := e.ring.Get(k)
 		result, err := cmd.Int64()
 		if err != nil {
 			if e.shouldLogErrors {
-				log.Println("error checking expired for key: " + k)
+				err = errors.Wrap(err, "checking expired for "+k)
+				log.Println(err.Error())
 			}
 			return false
 		}
@@ -147,12 +154,12 @@ func (e *Engine) Lock(key string) error {
 		return err
 	}
 
-	k := e.getLockKey(lockPrefix, key)
+	k := e.getLockKey(key)
 	cmd := e.ring.Set(k, []byte("1"), e.cleanupTimeout)
 
 	err = cmd.Err()
 	if err != nil {
-		return errors.Wrap(err, "attempting to lock") // TODO add key
+		return errors.Wrap(err, "attempting to lock "+k) // TODO add key
 	}
 
 	return nil
@@ -165,12 +172,12 @@ func (e *Engine) Unlock(key string) error {
 		return err
 	}
 
-	k := e.getLockKey(lockPrefix, key)
+	k := e.getLockKey(key)
 	cmd := e.ring.Del(k)
 
 	err = cmd.Err()
 	if err != nil {
-		return errors.Wrap(err, "attempting to unlock") // TODO add key
+		return errors.Wrap(err, "attempting to unlock "+k) // TODO add key
 	}
 
 	return nil
@@ -183,16 +190,21 @@ func (e *Engine) Expire(key string) error {
 		return err
 	}
 
+	k := e.prefix + key
+	expiryKey := e.getExpireKey(key)
+	lockKey := e.getLockKey(key)
+
 	// delete all relevant keys
 	cmd := e.ring.Del(
-		e.prefix+key,
-		e.prefix+expirePrefix+key,
-		e.prefix+lockPrefix+key,
+		k,
+		expiryKey,
+		lockKey,
 	)
 
 	err = cmd.Err()
 	if err != nil {
-		return errors.Wrap(err, "attempted to expire") // TODO add key
+		return errors.Wrap(err,
+			fmt.Sprintf("attempted to expire [%s, %s, %s]", k, expiryKey, lockKey))
 	}
 
 	return nil
@@ -212,6 +224,11 @@ func (e *Engine) hasRing(method string) error {
 }
 
 // helper function for locking / unlocking keys
-func (e *Engine) getLockKey(lockPrefix, key string) string {
+func (e *Engine) getLockKey(key string) string {
 	return e.prefix + lockPrefix + key
+}
+
+// helper function for expiry keys
+func (e *Engine) getExpireKey(key string) string {
+	return e.prefix + expirePrefix + key
 }
