@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/fresh8/go-cache/engine/common"
 	"github.com/pkg/errors"
 	redis "gopkg.in/redis.v4"
 )
@@ -45,8 +46,8 @@ func NewRedisRingEngine(
 
 // Exists checks to see if a key exists in the store
 func (e *Engine) Exists(key string) bool {
-	if e.ring == nil {
-		log.Println("redisring EXISTS: nil redis ring for engine")
+	err := e.hasRing("Exists")
+	if err != nil {
 		return false
 	}
 
@@ -63,27 +64,28 @@ func (e *Engine) Exists(key string) bool {
 
 // Get retrieves data from teh store based on the key if it exists,
 // returns an error if the key does not exist or the redis connection fails
-func (e *Engine) Get(key string) (data []byte, err error) {
-	if e.ring == nil {
-		return nil, errors.New("redisring GET: nil redis ring for engine")
+func (e *Engine) Get(key string) ([]byte, error) {
+	err := e.hasRing("Get")
+	if err != nil {
+		return nil, err
 	}
 
 	cmd := e.ring.Get(e.prefix + key)
 	result, err := cmd.Bytes()
 	if err != nil {
-		return nil, errors.Wrap(err, "redisring GET")
+		return nil, errors.Wrap(err, "attempting to get") // TODO add key
 	}
 
 	return result, nil
 }
 
-// Put stores data against a key, else it returns an error
-func (e *Engine) Put(key string, data []byte, expires time.Time) error {
-	return errors.New("not yet implemented")
-}
-
 // IsExpired checks to see if the given key has expired
 func (e *Engine) IsExpired(key string) bool {
+	err := e.hasRing("IsExpired")
+	if err != nil {
+		return false
+	}
+
 	if e.Exists(expirePrefix + key) {
 		k := e.prefix + expirePrefix + key
 		cmd := e.ring.Get(k)
@@ -105,6 +107,11 @@ func (e *Engine) IsExpired(key string) bool {
 
 // IsLocked checks to see if the key has been locked
 func (e *Engine) IsLocked(key string) bool {
+	err := e.hasRing("IsLocked")
+	if err != nil {
+		return false
+	}
+
 	return e.Exists(lockPrefix + key)
 }
 
@@ -116,11 +123,8 @@ func getLockKey(enginePrefix, lockPrefix, key string) string {
 // SETEX doesn't exist within this lib, it's advised to use Set for similar behavior
 // https://github.com/go-redis/redis/blob/dc9d5006b3c319de24b2fa4de242e442553fcce2/commands.go#L726
 func (e *Engine) Lock(key string) error {
-	if e.ring == nil {
-		err := errors.New("LOCK: nil ring in redisring engine")
-		if e.shouldLogErrors {
-			log.Println(err.Error())
-		}
+	err := e.hasRing("Lock")
+	if err != nil {
 		return err
 	}
 
@@ -128,9 +132,33 @@ func (e *Engine) Lock(key string) error {
 
 	cmd := e.ring.Set(k, []byte("1"), e.cleanupTimeout)
 
-	err := cmd.Err()
+	err = cmd.Err()
 	if err != nil {
-		return errors.Wrap(err, "redisring LOCK")
+		return errors.Wrap(err, "attempting to lock") // TODO add key
+	}
+
+	return nil
+}
+
+// Put stores data against a key, else it returns an error
+// SETEX doesn't exist within this lib, it's advised to use Set for similar behavior
+// https://github.com/go-redis/redis/blob/dc9d5006b3c319de24b2fa4de242e442553fcce2/commands.go#L726
+func (e *Engine) Put(key string, data []byte, expires time.Time) error {
+	err := e.hasRing("Put")
+	if err != nil {
+		return err
+	}
+
+	dataCmd := e.ring.Set(e.prefix+key, data, e.cleanupTimeout)
+	err = dataCmd.Err()
+	if err != nil {
+		return errors.Wrap(err, "attempting to set data") // TODO add key
+	}
+
+	expireCmd := e.ring.Set(e.prefix+expirePrefix+key, data, e.cleanupTimeout)
+	err = expireCmd.Err()
+	if err != nil {
+		return errors.Wrap(err, "attempting to set expire key") // TODO add key
 	}
 
 	return nil
@@ -138,11 +166,8 @@ func (e *Engine) Lock(key string) error {
 
 // Unlock removes the lock from a given key
 func (e *Engine) Unlock(key string) error {
-	if e.ring == nil {
-		err := errors.New("UNLOCK: nil ring in redisring engine")
-		if e.shouldLogErrors {
-			log.Println(err.Error())
-		}
+	err := e.hasRing("Unlock")
+	if err != nil {
 		return err
 	}
 
@@ -150,10 +175,45 @@ func (e *Engine) Unlock(key string) error {
 
 	cmd := e.ring.Del(k)
 
-	err := cmd.Err()
+	err = cmd.Err()
 	if err != nil {
-		return errors.Wrap(err, "UNLOCK")
+		return errors.Wrap(err, "attempting to unlock") // TODO add key
 	}
 
 	return nil
+}
+
+// Expire marks the key as expired and removes it from the storage engine
+func (e *Engine) Expire(key string) error {
+	err := e.hasRing("Expire")
+	if err != nil {
+		return err
+	}
+
+	// delete all relevant keys
+	cmd := e.ring.Del(
+		e.prefix+key,
+		e.prefix+expirePrefix+key,
+		e.prefix+lockPrefix+key,
+	)
+
+	err = cmd.Err()
+	if err != nil {
+		return errors.Wrap(err, "attempted to expire") // TODO add key
+	}
+
+	return nil
+}
+
+func (e *Engine) hasRing(method string) error {
+	err := errors.New(method + ": nil ring in redisring engine")
+	if e.shouldLogErrors {
+		log.Println(err.Error())
+	}
+	return err
+}
+
+func test() common.Engine {
+	r, _ := NewRedisRingEngine("test", &redis.RingOptions{}, time.Duration(1)*time.Second, true)
+	return r
 }
