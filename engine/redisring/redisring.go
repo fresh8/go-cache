@@ -13,7 +13,8 @@ type Engine struct {
 	prefix string
 	ring   *redis.Ring
 
-	cleanupTimeout time.Duration
+	shouldLogErrors bool
+	cleanupTimeout  time.Duration
 }
 
 const expirePrefix = "expire:"
@@ -24,6 +25,7 @@ func NewRedisRingEngine(
 	prefix string,
 	ringOpts *redis.RingOptions,
 	cleanupTimeout time.Duration,
+	shouldLogErrors bool,
 ) (*Engine, error) {
 	if ringOpts == nil {
 		return nil, errors.New("nil ringOpts passed to NewRedisRingEngine")
@@ -34,9 +36,10 @@ func NewRedisRingEngine(
 	}
 
 	return &Engine{
-		prefix:         prefix + ":",
-		ring:           redis.NewRing(ringOpts),
-		cleanupTimeout: cleanupTimeout,
+		prefix:          prefix + ":",
+		ring:            redis.NewRing(ringOpts),
+		cleanupTimeout:  cleanupTimeout,
+		shouldLogErrors: shouldLogErrors,
 	}, nil
 }
 
@@ -50,7 +53,9 @@ func (e *Engine) Exists(key string) bool {
 	cmd := e.ring.Exists(e.prefix + key)
 	result, err := cmd.Result()
 	if err != nil {
-		log.Println(err.Error())
+		if e.shouldLogErrors {
+			log.Println(err.Error())
+		}
 		return false
 	}
 	return result
@@ -64,10 +69,91 @@ func (e *Engine) Get(key string) (data []byte, err error) {
 	}
 
 	cmd := e.ring.Get(e.prefix + key)
-	result, err := cmd.Result()
+	result, err := cmd.Bytes()
 	if err != nil {
 		return nil, errors.Wrap(err, "redisring GET")
 	}
 
-	return []byte(result), nil
+	return result, nil
+}
+
+// Put stores data against a key, else it returns an error
+func (e *Engine) Put(key string, data []byte, expires time.Time) error {
+	return errors.New("not yet implemented")
+}
+
+// IsExpired checks to see if the given key has expired
+func (e *Engine) IsExpired(key string) bool {
+	if e.Exists(expirePrefix + key) {
+		k := e.prefix + expirePrefix + key
+		cmd := e.ring.Get(k)
+		result, err := cmd.Int64()
+		if err != nil {
+			if e.shouldLogErrors {
+				log.Println("error checking expired for key: " + k)
+			}
+			return false
+		}
+
+		if time.Now().Unix() > result {
+			return true
+		}
+	}
+
+	return false
+}
+
+// IsLocked checks to see if the key has been locked
+func (e *Engine) IsLocked(key string) bool {
+	return e.Exists(lockPrefix + key)
+}
+
+func getLockKey(enginePrefix, lockPrefix, key string) string {
+	return enginePrefix + lockPrefix + key
+}
+
+// Lock sets a lock against a given key
+// SETEX doesn't exist within this lib, it's advised to use Set for similar behavior
+// https://github.com/go-redis/redis/blob/dc9d5006b3c319de24b2fa4de242e442553fcce2/commands.go#L726
+func (e *Engine) Lock(key string) error {
+	if e.ring == nil {
+		err := errors.New("LOCK: nil ring in redisring engine")
+		if e.shouldLogErrors {
+			log.Println(err.Error())
+		}
+		return err
+	}
+
+	k := getLockKey(e.prefix, lockPrefix, key)
+
+	cmd := e.ring.Set(k, []byte("1"), e.cleanupTimeout)
+
+	err := cmd.Err()
+	if err != nil {
+		return errors.Wrap(err, "redisring LOCK")
+	}
+
+	return nil
+}
+
+// Unlock removes the lock from a given key
+func (e *Engine) Unlock(key string) error {
+	if e.ring == nil {
+		err := errors.New("UNLOCK: nil ring in redisring engine")
+		if e.shouldLogErrors {
+			log.Println(err.Error())
+		}
+		return err
+	}
+
+	k := getLockKey(e.prefix, lockPrefix, key)
+
+	cmd := e.ring.Del(k)
+
+	err := cmd.Err()
+	if err != nil {
+		return errors.Wrap(err, "UNLOCK")
+	}
+
+	return nil
 }
