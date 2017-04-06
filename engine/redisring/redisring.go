@@ -4,7 +4,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/fresh8/go-cache/engine/common"
 	"github.com/pkg/errors"
 	redis "gopkg.in/redis.v4"
 )
@@ -79,6 +78,30 @@ func (e *Engine) Get(key string) ([]byte, error) {
 	return result, nil
 }
 
+// Put stores data against a key, else it returns an error
+// SETEX doesn't exist within this lib, it's advised to use Set for similar behavior
+// https://github.com/go-redis/redis/blob/dc9d5006b3c319de24b2fa4de242e442553fcce2/commands.go#L726
+func (e *Engine) Put(key string, data []byte, expires time.Time) error {
+	err := e.hasRing("Put")
+	if err != nil {
+		return err
+	}
+
+	dataCmd := e.ring.Set(e.prefix+key, data, e.cleanupTimeout)
+	err = dataCmd.Err()
+	if err != nil {
+		return errors.Wrap(err, "attempting to set data") // TODO add key
+	}
+
+	expireCmd := e.ring.Set(e.prefix+expirePrefix+key, data, e.cleanupTimeout)
+	err = expireCmd.Err()
+	if err != nil {
+		return errors.Wrap(err, "attempting to set expire key") // TODO add key
+	}
+
+	return nil
+}
+
 // IsExpired checks to see if the given key has expired
 func (e *Engine) IsExpired(key string) bool {
 	err := e.hasRing("IsExpired")
@@ -115,10 +138,6 @@ func (e *Engine) IsLocked(key string) bool {
 	return e.Exists(lockPrefix + key)
 }
 
-func getLockKey(enginePrefix, lockPrefix, key string) string {
-	return enginePrefix + lockPrefix + key
-}
-
 // Lock sets a lock against a given key
 // SETEX doesn't exist within this lib, it's advised to use Set for similar behavior
 // https://github.com/go-redis/redis/blob/dc9d5006b3c319de24b2fa4de242e442553fcce2/commands.go#L726
@@ -128,37 +147,12 @@ func (e *Engine) Lock(key string) error {
 		return err
 	}
 
-	k := getLockKey(e.prefix, lockPrefix, key)
-
+	k := e.getLockKey(lockPrefix, key)
 	cmd := e.ring.Set(k, []byte("1"), e.cleanupTimeout)
 
 	err = cmd.Err()
 	if err != nil {
 		return errors.Wrap(err, "attempting to lock") // TODO add key
-	}
-
-	return nil
-}
-
-// Put stores data against a key, else it returns an error
-// SETEX doesn't exist within this lib, it's advised to use Set for similar behavior
-// https://github.com/go-redis/redis/blob/dc9d5006b3c319de24b2fa4de242e442553fcce2/commands.go#L726
-func (e *Engine) Put(key string, data []byte, expires time.Time) error {
-	err := e.hasRing("Put")
-	if err != nil {
-		return err
-	}
-
-	dataCmd := e.ring.Set(e.prefix+key, data, e.cleanupTimeout)
-	err = dataCmd.Err()
-	if err != nil {
-		return errors.Wrap(err, "attempting to set data") // TODO add key
-	}
-
-	expireCmd := e.ring.Set(e.prefix+expirePrefix+key, data, e.cleanupTimeout)
-	err = expireCmd.Err()
-	if err != nil {
-		return errors.Wrap(err, "attempting to set expire key") // TODO add key
 	}
 
 	return nil
@@ -171,8 +165,7 @@ func (e *Engine) Unlock(key string) error {
 		return err
 	}
 
-	k := getLockKey(e.prefix, lockPrefix, key)
-
+	k := e.getLockKey(lockPrefix, key)
 	cmd := e.ring.Del(k)
 
 	err = cmd.Err()
@@ -205,6 +198,7 @@ func (e *Engine) Expire(key string) error {
 	return nil
 }
 
+// helper function that checks to see if a valid ring exists on the engine
 func (e *Engine) hasRing(method string) error {
 	err := errors.New(method + ": nil ring in redisring engine")
 	if e.shouldLogErrors {
@@ -213,7 +207,7 @@ func (e *Engine) hasRing(method string) error {
 	return err
 }
 
-func test() common.Engine {
-	r, _ := NewRedisRingEngine("test", &redis.RingOptions{}, time.Duration(1)*time.Second, true)
-	return r
+// helper function for locking / unlocking keys
+func (e *Engine) getLockKey(lockPrefix, key string) string {
+	return e.prefix + lockPrefix + key
 }
