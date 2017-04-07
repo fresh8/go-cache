@@ -107,14 +107,14 @@ func (e *Engine) Put(key string, data []byte, expires time.Time) error {
 
 	_, pipelineErr := e.ring.Pipelined(func(p *redis.Pipeline) error {
 		dataKey := e.prefix + key
-		dataCmd := e.ring.Set(dataKey, data, e.cleanupTimeout)
+		dataCmd := p.Set(dataKey, data, e.cleanupTimeout)
 		err = dataCmd.Err()
 		if err != nil {
 			return errors.Wrap(err, "attempting to set data for "+dataKey)
 		}
 
 		expireKey := e.getExpireKey(key)
-		expireCmd := e.ring.Set(expireKey, expires.Unix(), e.cleanupTimeout)
+		expireCmd := p.Set(expireKey, expires.Unix(), e.cleanupTimeout)
 		err = expireCmd.Err()
 		if err != nil {
 			return errors.Wrap(err, "attempting to set expire key "+expireKey)
@@ -139,7 +139,7 @@ func (e *Engine) IsExpired(key string) bool {
 	if e.Exists(expirePrefix + key) {
 		k := e.getExpireKey(key)
 		_, pipelineErr := e.ring.Pipelined(func(p *redis.Pipeline) error {
-			cmd := e.ring.Get(k)
+			cmd := p.Get(k)
 			result, err = cmd.Int64()
 			return err
 		})
@@ -182,7 +182,7 @@ func (e *Engine) Lock(key string) error {
 
 	k := e.getLockKey(key)
 	_, pipelineErr := e.ring.Pipelined(func(p *redis.Pipeline) error {
-		cmd := e.ring.Set(k, []byte("1"), e.cleanupTimeout)
+		cmd := p.Set(k, []byte("1"), e.cleanupTimeout)
 		err = cmd.Err()
 		return err
 	})
@@ -203,7 +203,7 @@ func (e *Engine) Unlock(key string) error {
 
 	k := e.getLockKey(key)
 	_, pipelineErr := e.ring.Pipelined(func(p *redis.Pipeline) error {
-		cmd := e.ring.Del(k)
+		cmd := p.Del(k)
 		err = cmd.Err()
 		return err
 	})
@@ -229,7 +229,7 @@ func (e *Engine) Expire(key string) error {
 
 	_, pipelineErr := e.ring.Pipelined(func(p *redis.Pipeline) error {
 		// delete all relevant keys
-		cmd := e.ring.Del(
+		cmd := p.Del(
 			k,
 			expiryKey,
 			lockKey,
