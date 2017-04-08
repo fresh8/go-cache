@@ -65,11 +65,14 @@ func (e *Engine) Put(key string, data []byte, expires time.Time) error {
 	conn := e.pool.Get()
 	defer conn.Close()
 
-	// Pipeline commands
-	conn.Send("MULTI")
-	conn.Send("SETEX", e.prefix+key, e.cleanupTimeout.Seconds(), data)
-	conn.Send("SETEX", e.prefix+expirePrefix+key, e.cleanupTimeout.Seconds(), expires.Unix())
-	_, err := conn.Do("EXEC")
+	_, err := conn.Do("SETEX", e.prefix+key, e.cleanupTimeout.Seconds(), data)
+	if err != nil {
+		return err
+	}
+	_, err = conn.Do("SETEX", e.prefix+expirePrefix+key, e.cleanupTimeout.Seconds(), expires.Unix())
+	if err != nil {
+		return err
+	}
 
 	return err
 }
@@ -99,13 +102,15 @@ func (e *Engine) Expire(key string) error {
 	conn := e.pool.Get()
 	defer conn.Close()
 
-	// Pipeline commands
-	conn.Send("MULTI")
-	conn.Send("DEL", e.prefix+key)
-	conn.Send("DEL", e.prefix+expirePrefix+key)
-	conn.Send("DEL", e.prefix+lockPrefix+key)
-	_, err := conn.Do("EXEC")
-
+	_, err := conn.Do("DEL", e.prefix+key)
+	if err != nil {
+		return err
+	}
+	_, err = conn.Do("DEL", e.prefix+expirePrefix+key)
+	if err != nil {
+		return err
+	}
+	_, err = conn.Do("DEL", e.prefix+lockPrefix+key)
 	return err
 }
 
