@@ -26,4 +26,5 @@ type Engine interface {
 var (
 	ErrNonExistentKey   = errors.New("non-existant key")
 	ErrKeyAlreadyLocked = errors.New("key already locked")
+	ErrInvalidData      = errors.New("invalid data")
 )
