@@ -70,7 +70,8 @@ func (e *Engine) Get(key string) (data []byte, err error) {
 
 	data, ok := record.Bins["data"].([]byte)
 	if !ok {
-		// TODO: Handle this error properly
+		err = common.ErrInvalidData
+		return
 	}
 
 	return
