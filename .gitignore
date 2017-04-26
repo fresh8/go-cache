@@ -1,2 +1,4 @@
 .idea
 go-cache.iml
+
+vendor/

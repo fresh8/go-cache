@@ -1,0 +1,34 @@
+hash: b79807f094695cb0366115563190735ec513ba1d8664c3499e271611b2ba8bff
+updated: 2017-04-26T15:09:22.308045919+01:00
+imports:
+- name: github.com/aerospike/aerospike-client-go
+  version: 1dc8cf203d24cd454e71ce40ab4cd0bf3112df90
+  subpackages:
+  - internal/lua
+  - internal/lua/resources
+  - logger
+  - pkg/bcrypt
+  - pkg/ripemd160
+  - types
+  - types/atomic
+  - types/particle_type
+  - types/rand
+  - utils/buffer
+- name: github.com/garyburd/redigo
+  version: 8873b2f1995f59d4bcdd2b0dc9858e2cb9bf0c13
+  subpackages:
+  - internal
+  - redis
+- name: github.com/yuin/gopher-lua
+  version: b402f3114ec730d8bddb074a6c137309f561aa78
+  subpackages:
+  - ast
+  - parse
+  - pm
+- name: golang.org/x/net
+  version: da118f7b8e5954f39d0d2130ab35d4bf0e3cb344
+  subpackages:
+  - context
+testImports:
+- name: github.com/rafaeljusto/redigomock
+  version: ca49a8af34fc0c903a37409317576da14b3f1cbd

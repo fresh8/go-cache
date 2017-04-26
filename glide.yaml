@@ -1,0 +1,11 @@
+package: github.com/fresh8/go-cache
+import:
+- package: github.com/aerospike/aerospike-client-go
+  version: ^1.27.0
+- package: github.com/garyburd/redigo
+  version: ^1.0.0
+  subpackages:
+  - redis
+testImport:
+- package: github.com/rafaeljusto/redigomock
+  version: ^2.0.0
