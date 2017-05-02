@@ -1,0 +1,17 @@
+machine:
+  environment:
+    IMPORT_PATH: "/home/ubuntu/.go_workspace/src/github.com/fresh8"
+    APP_PATH: "$IMPORT_PATH/go-cache"
+dependencies:
+  override:
+    - sudo add-apt-repository ppa:masterminds/glide -y
+    - sudo apt-get update
+    - sudo apt-get install glide -y
+test:
+  pre:
+    - go version
+    - mkdir -p "$IMPORT_PATH"
+    - ln -sf "$(pwd)" "$APP_PATH"
+    - cd "$APP_PATH" && glide install
+  override:
+    - cd "$APP_PATH" && go test -cover -race $(glide nv)
