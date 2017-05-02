@@ -180,7 +180,8 @@ func TestInMemory_Unlock(t *testing.T) {
 func TestInMemory_IsExpired(t *testing.T) {
 	content := []byte("hello")
 	memStore := NewMemoryStore(time.Second * 10)
-	//Check if key has expired
+
+	// Check if key has expired
 	if !memStore.IsExpired("existing") {
 		t.Fatal("memory store should return true if the key has expired")
 	}
@@ -190,18 +191,18 @@ func TestInMemory_IsExpired(t *testing.T) {
 		t.Fatalf("no error expected, %s given", err)
 	}
 
-	//Check if key has expired
+	// Check if key has expired
 	if memStore.IsExpired("existing") {
 		t.Fatal("memory store should return false if the key has not expired")
 	}
 
-	//Force expiry
+	// Force expiry
 	memStore.expire["existing"] = time.Now()
 
-	//Wait until the cleanup poll has passed
+	// Wait until the cleanup poll has passed
 	time.After(time.Second * 10)
 
-	//Check if key has auto expired
+	// Check if key has auto expired
 	if !memStore.IsExpired("existing") {
 		t.Fatal("memory store should return true if the key has expired")
 	}
@@ -252,7 +253,7 @@ func TestInMemory_PollExpire(t *testing.T) {
 	memStore.locks["existing"] = true
 	memStore.expire["existing"] = time.Now()
 
-	//Wait until the cleanup poll has passed
+	// Wait until the cleanup poll has passed
 	time.After(time.Second * 1)
 
 	err = memStore.Expire("existing")
