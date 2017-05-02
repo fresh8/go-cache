@@ -67,20 +67,17 @@ func (e *Engine) Get(key string) (data []byte, err error) {
 
 // Put stores data against a key, else it returns an error
 func (e *Engine) Put(key string, data []byte, expires time.Time) error {
-	// Set expiration to cleanup timeout
-	diff := time.Now().Add(e.cleanupTimeout).Sub(time.Now())
-
 	item := &memcache.Item{
 		Key:        key,
 		Value:      data,
-		Expiration: int32(diff.Seconds() + 1),
+		Expiration: int32(e.cleanupTimeout.Seconds()),
 	}
 
 	expireString := strconv.Itoa(int(expires.Unix()))
 	expireItem := &memcache.Item{
 		Key:        expirePrefix + key,
 		Value:      []byte(expireString),
-		Expiration: int32(diff.Seconds() + 1),
+		Expiration: int32(e.cleanupTimeout.Seconds()),
 	}
 
 	err := e.client.Set(item)
