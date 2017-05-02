@@ -249,9 +249,15 @@ func TestInMemory_PollExpire(t *testing.T) {
 		t.Fatalf("key does not exist, should return error")
 	}
 
+	storeLock.Lock()
+	locksLock.Lock()
+
 	memStore.store["existing"] = content
 	memStore.locks["existing"] = true
 	memStore.expire["existing"] = time.Now()
+
+	storeLock.Unlock()
+	locksLock.Unlock()
 
 	// Wait until the cleanup poll has passed
 	time.After(time.Second * 1)
