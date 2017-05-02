@@ -1,5 +1,5 @@
-hash: 5b0c16a9e2cfd75141d4d8e44b8343fa8000a0c3fe5a2c730cb73a00268cf1da
-updated: 2017-05-02T10:52:22.018884502+01:00
+hash: ec277e04e14b07fdf41b9b948c4b27d2dec1d964b88e7e937f51bad25abb0004
+updated: 2017-05-02T11:03:14.612797533+01:00
 imports:
 - name: github.com/aerospike/aerospike-client-go
   version: 1dc8cf203d24cd454e71ce40ab4cd0bf3112df90
@@ -15,28 +15,20 @@ imports:
   - types/rand
   - utils/buffer
 - name: github.com/garyburd/redigo
-  version: 8873b2f1995f59d4bcdd2b0dc9858e2cb9bf0c13
+  version: ac91d6ff49bd0d278a90201de77a4f8ad9628e25
   subpackages:
   - internal
   - redis
-- name: github.com/onsi/ginkgo
-  version: 83438ca4278f2f56757b9ab2cb15dd4f596d84e8
-- name: github.com/onsi/gomega
-  version: da367351331c75190afec7ed3a0c61e0016942ed
 - name: github.com/yuin/gopher-lua
   version: b402f3114ec730d8bddb074a6c137309f561aa78
   subpackages:
   - ast
   - parse
   - pm
-- name: golang.org/x/crypto
-  version: c7af5bf2638a1164f2eb5467c39c6cffbd13a02e
-  subpackages:
-  - ssh/terminal
 - name: golang.org/x/net
   version: da118f7b8e5954f39d0d2130ab35d4bf0e3cb344
   subpackages:
   - context
 testImports:
 - name: github.com/rafaeljusto/redigomock
-  version: ca49a8af34fc0c903a37409317576da14b3f1cbd
+  version: dafd969785a5948b7a263843f53b3f90544772d0
