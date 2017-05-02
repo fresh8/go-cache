@@ -1,7 +1,6 @@
 package memcache
 
 import (
-	// "log"
 	"strconv"
 	"time"
 
@@ -137,7 +136,7 @@ func (e *Engine) Lock(key string) error {
 	diff := time.Now().Add(e.cleanupTimeout).Sub(time.Now())
 
 	lockItem := &memcache.Item{
-		Key:        key,
+		Key:        lockPrefix + key,
 		Value:      []byte("true"),
 		Expiration: int32(diff.Seconds() + 1),
 	}
