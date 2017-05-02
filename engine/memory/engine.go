@@ -145,10 +145,12 @@ func (e *Engine) Unlock(key string) error {
 func (e *Engine) cleanupExpiredKeys() {
 	go func() {
 		for range time.Tick(e.expirePoll) {
+			storeLock.RLock()
 			for k := range e.expire {
 				//If the key has expired it will be cleared by this call
 				e.IsExpired(k)
 			}
+			storeLock.RUnlock()
 		}
 	}()
 }
