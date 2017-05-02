@@ -9,6 +9,7 @@ dependencies:
     - sudo apt-get install glide -y
 test:
   pre:
+    - go version
     - mkdir -p "$IMPORT_PATH"
     - ln -sf "$(pwd)" "$APP_PATH"
     - cd "$APP_PATH" && glide install
