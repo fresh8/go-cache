@@ -6,6 +6,11 @@ import:
   version: ^1.0.0
   subpackages:
   - redis
+- package: golang.org/x/crypto
+  subpackages:
+  - ssh/terminal
+- package: github.com/onsi/ginkgo
+- package: github.com/onsi/gomega
 testImport:
 - package: github.com/rafaeljusto/redigomock
   version: ^2.0.0

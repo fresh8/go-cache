@@ -1,5 +1,5 @@
-hash: b79807f094695cb0366115563190735ec513ba1d8664c3499e271611b2ba8bff
-updated: 2017-04-26T15:09:22.308045919+01:00
+hash: 5b0c16a9e2cfd75141d4d8e44b8343fa8000a0c3fe5a2c730cb73a00268cf1da
+updated: 2017-05-02T10:52:22.018884502+01:00
 imports:
 - name: github.com/aerospike/aerospike-client-go
   version: 1dc8cf203d24cd454e71ce40ab4cd0bf3112df90
@@ -19,12 +19,20 @@ imports:
   subpackages:
   - internal
   - redis
+- name: github.com/onsi/ginkgo
+  version: 83438ca4278f2f56757b9ab2cb15dd4f596d84e8
+- name: github.com/onsi/gomega
+  version: da367351331c75190afec7ed3a0c61e0016942ed
 - name: github.com/yuin/gopher-lua
   version: b402f3114ec730d8bddb074a6c137309f561aa78
   subpackages:
   - ast
   - parse
   - pm
+- name: golang.org/x/crypto
+  version: c7af5bf2638a1164f2eb5467c39c6cffbd13a02e
+  subpackages:
+  - ssh/terminal
 - name: golang.org/x/net
   version: da118f7b8e5954f39d0d2130ab35d4bf0e3cb344
   subpackages:
