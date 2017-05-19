@@ -257,7 +257,7 @@ func TestCacherRegeneratesOnExpiry(t *testing.T) {
 	}
 
 	if getCallCount != 0 {
-		t.Fatalf("get function run count should be 1, %d given", getCallCount)
+		t.Fatalf("get function run count should be 0, %d given", getCallCount)
 	}
 
 	if bytes.Compare(data, content) != 0 {
@@ -289,7 +289,7 @@ func TestCacherRegeneratesOnExpiry(t *testing.T) {
 	}
 
 	if getCallCount != 1 {
-		t.Fatalf("get function run count should be 2, %d given", getCallCount)
+		t.Fatalf("get function run count should be 1, %d given", getCallCount)
 	}
 
 	if bytes.Compare(data, content) != 0 {
@@ -363,7 +363,7 @@ func TestCacherPersistsOnRegenerateError(t *testing.T) {
 	}
 
 	if getCallCount != 0 {
-		t.Fatalf("get function run count should be 1, %d given", getCallCount)
+		t.Fatalf("get function run count should be 0, %d given", getCallCount)
 	}
 
 	if bytes.Compare(data, content) != 0 {
