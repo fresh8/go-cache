@@ -11,15 +11,19 @@ import (
 // TODO: This should be replaced by a mock, not use memory engine
 
 func TestCacher_Get(t *testing.T) {
-	e := engine.NewMemoryStore(time.Second * 60)
-	cache := NewCacher(e, 5, 5)
-	content := []byte("hello")
-	countChan := make(chan int, 10)
-	regenerate := func() ([]byte, error) {
-		countChan <- 1
-		// count = count + 1
-		return content, nil
-	}
+	var (
+		e       = engine.NewMemoryStore(time.Second * 60)
+		cache   = NewCacher(e, 5, 5)
+		content = []byte("hello")
+
+		// count our responses using a channel to avoid data races
+		countChan  = make(chan int, 10)
+		regenerate = func() ([]byte, error) {
+			countChan <- 1
+			// count = count + 1
+			return content, nil
+		}
+	)
 
 	data, err := cache.Get("existing", time.Now().Add(1*time.Minute), regenerate)()
 	if err != nil {
@@ -59,11 +63,16 @@ func TestCacher_Get(t *testing.T) {
 		t.Fatalf("regenerate function run count should be 2, %d given", len(countChan))
 	}
 
+	// wait for our key to expire
 	<-time.After(2 * time.Second)
+
+	// fire off a new Get
 	data, err = cache.Get("existing", time.Now().Add(1*time.Second), func() ([]byte, error) {
 		countChan <- 1
 		return newContent, nil
 	})()
+
+	// wait an arbitrary amount of time for the worker queue to process the data
 	<-time.After(10 * time.Millisecond)
 
 	if bytes.Compare(data, newContent) != 0 {

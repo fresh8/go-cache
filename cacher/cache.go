@@ -53,9 +53,12 @@ func (c cacher) get(key string, expires time.Time, regenerate func() ([]byte, er
 			c.engine.Lock(key)
 			defer c.engine.Unlock(key)
 
-			data, err = regenerate()
-			c.engine.Put(key, data, expires)
+			regeneratedData, regenerateError := regenerate()
+			if regenerateError == nil {
+				c.engine.Put(key, regeneratedData, expires)
+			}
 		}
+
 		return
 	}
 
