@@ -197,13 +197,13 @@ func TestCacherRegeneratesOnExpiry(t *testing.T) {
 		eng            = &common.EngineMock{}
 		locked         = false
 		content        = []byte("content")
-		regenCallCount = 0
-		putCallCount   = 0
-		getCallCount   = 0
+		regenCallCount = make(chan int, 10)
+		putCallCount   = make(chan int, 10)
+		getCallCount   = make(chan int, 10)
 	)
 
 	eng.GetFunc = func(key string) ([]byte, error) {
-		getCallCount = getCallCount + 1
+		getCallCount <- 1
 		return content, nil
 	}
 
@@ -221,14 +221,14 @@ func TestCacherRegeneratesOnExpiry(t *testing.T) {
 	}
 
 	eng.PutFunc = func(key string, data []byte, expiry time.Time) error {
-		putCallCount = putCallCount + 1
+		putCallCount <- 1
 		return nil
 	}
 
 	cache := NewCacher(eng, 5, 5)
 
 	regenerate := func() ([]byte, error) {
-		regenCallCount = regenCallCount + 1
+		regenCallCount <- 1
 		return content, nil
 	}
 
@@ -248,16 +248,16 @@ func TestCacherRegeneratesOnExpiry(t *testing.T) {
 
 	<-time.After(10 * time.Millisecond)
 
-	if regenCallCount != 1 {
-		t.Fatalf("regenerate function run count should be 1, %d given", regenCallCount)
+	if len(regenCallCount) != 1 {
+		t.Fatalf("regenerate function run count should be 1, %d given", len(regenCallCount))
 	}
 
-	if putCallCount != 1 {
-		t.Fatalf("put function run count should be 1, %d given", putCallCount)
+	if len(putCallCount) != 1 {
+		t.Fatalf("put function run count should be 1, %d given", len(putCallCount))
 	}
 
-	if getCallCount != 0 {
-		t.Fatalf("get function run count should be 0, %d given", getCallCount)
+	if len(getCallCount) != 0 {
+		t.Fatalf("get function run count should be 0, %d given", len(getCallCount))
 	}
 
 	if bytes.Compare(data, content) != 0 {
@@ -280,16 +280,16 @@ func TestCacherRegeneratesOnExpiry(t *testing.T) {
 
 	<-time.After(10 * time.Millisecond)
 
-	if regenCallCount != 2 {
-		t.Fatalf("regenerate function run count should be 2, %d given", regenCallCount)
+	if len(regenCallCount) != 2 {
+		t.Fatalf("regenerate function run count should be 2, %d given", len(regenCallCount))
 	}
 
-	if putCallCount != 2 {
-		t.Fatalf("put function run count should be 2, %d given", putCallCount)
+	if len(putCallCount) != 2 {
+		t.Fatalf("put function run count should be 2, %d given", len(putCallCount))
 	}
 
-	if getCallCount != 1 {
-		t.Fatalf("get function run count should be 1, %d given", getCallCount)
+	if len(getCallCount) != 1 {
+		t.Fatalf("get function run count should be 1, %d given", len(getCallCount))
 	}
 
 	if bytes.Compare(data, content) != 0 {
@@ -303,13 +303,13 @@ func TestCacherPersistsOnRegenerateError(t *testing.T) {
 		eng            = &common.EngineMock{}
 		locked         = false
 		content        = []byte("content")
-		regenCallCount = 0
-		putCallCount   = 0
-		getCallCount   = 0
+		regenCallCount = make(chan int, 10)
+		putCallCount   = make(chan int, 10)
+		getCallCount   = make(chan int, 10)
 	)
 
 	eng.GetFunc = func(key string) ([]byte, error) {
-		getCallCount = getCallCount + 1
+		getCallCount <- 1
 		return content, nil
 	}
 
@@ -327,14 +327,14 @@ func TestCacherPersistsOnRegenerateError(t *testing.T) {
 	}
 
 	eng.PutFunc = func(key string, data []byte, expiry time.Time) error {
-		putCallCount = putCallCount + 1
+		putCallCount <- 1
 		return nil
 	}
 
 	cache := NewCacher(eng, 5, 5)
 
 	regenerate := func() ([]byte, error) {
-		regenCallCount = regenCallCount + 1
+		regenCallCount <- 1
 		return content, nil
 	}
 
@@ -354,16 +354,16 @@ func TestCacherPersistsOnRegenerateError(t *testing.T) {
 
 	<-time.After(10 * time.Millisecond)
 
-	if regenCallCount != 1 {
-		t.Fatalf("regenerate function run count should be 1, %d given", regenCallCount)
+	if len(regenCallCount) != 1 {
+		t.Fatalf("regenerate function run count should be 1, %d given", len(regenCallCount))
 	}
 
-	if putCallCount != 1 {
-		t.Fatalf("put function run count should be 1, %d given", putCallCount)
+	if len(putCallCount) != 1 {
+		t.Fatalf("put function run count should be 1, %d given", len(putCallCount))
 	}
 
-	if getCallCount != 0 {
-		t.Fatalf("get function run count should be 0, %d given", getCallCount)
+	if len(getCallCount) != 0 {
+		t.Fatalf("get function run count should be 0, %d given", len(getCallCount))
 	}
 
 	if bytes.Compare(data, content) != 0 {
@@ -381,7 +381,7 @@ func TestCacherPersistsOnRegenerateError(t *testing.T) {
 
 	// exists and is expired, error regenerating
 	regenerate = func() ([]byte, error) {
-		regenCallCount = regenCallCount + 1
+		regenCallCount <- 1
 		return nil, errors.New("failure")
 	}
 
@@ -392,16 +392,16 @@ func TestCacherPersistsOnRegenerateError(t *testing.T) {
 
 	<-time.After(10 * time.Millisecond)
 
-	if regenCallCount != 2 {
-		t.Fatalf("regenerate function run count should be 2, %d given", regenCallCount)
+	if len(regenCallCount) != 2 {
+		t.Fatalf("regenerate function run count should be 2, %d given", len(regenCallCount))
 	}
 
-	if putCallCount != 1 {
-		t.Fatalf("put function run count should be 1, %d given", putCallCount)
+	if len(putCallCount) != 1 {
+		t.Fatalf("put function run count should be 1, %d given", len(putCallCount))
 	}
 
-	if getCallCount != 1 {
-		t.Fatalf("get function run count should be 1, %d given", getCallCount)
+	if len(getCallCount) != 1 {
+		t.Fatalf("get function run count should be 1, %d given", len(getCallCount))
 	}
 
 	if bytes.Compare(data, content) != 0 {
