@@ -13,10 +13,11 @@ import (
 func TestCacher_Get(t *testing.T) {
 	e := engine.NewMemoryStore(time.Second * 60)
 	cache := NewCacher(e, 5, 5)
-	count := 0
 	content := []byte("hello")
+	countChan := make(chan int, 10)
 	regenerate := func() ([]byte, error) {
-		count = count + 1
+		countChan <- 1
+		// count = count + 1
 		return content, nil
 	}
 
@@ -25,8 +26,8 @@ func TestCacher_Get(t *testing.T) {
 		t.Fatalf("no error expected, %s given", err)
 	}
 
-	if count != 1 {
-		t.Fatalf("regenerate function run count should be 1, %d given", count)
+	if len(countChan) != 1 {
+		t.Fatalf("regenerate function run count should be 1, %d given", len(countChan))
 	}
 
 	if bytes.Compare(data, content) != 0 {
@@ -38,15 +39,15 @@ func TestCacher_Get(t *testing.T) {
 		t.Fatalf("data expected to be different, %s expected, %s given", content, data)
 	}
 
-	if count != 1 {
-		t.Fatalf("regenerate function run count should be 1, %d given", count)
+	if len(countChan) != 1 {
+		t.Fatalf("regenerate function run count should be 1, %d given", len(countChan))
 	}
 
 	e.Expire("existing")
 
 	newContent := append(content, []byte("-world")...)
-	data, err = cache.Get("existing", time.Now().Add(1*time.Minute), func() ([]byte, error) {
-		count = count + 1
+	data, err = cache.Get("existing", time.Now().Add(1*time.Second), func() ([]byte, error) {
+		countChan <- 1
 		return newContent, nil
 	})()
 
@@ -54,7 +55,22 @@ func TestCacher_Get(t *testing.T) {
 		t.Fatalf("data expected to be different, %s expected, %s given", newContent, data)
 	}
 
-	if count != 2 {
-		t.Fatalf("regenerate function run count should be 1, %d given", count)
+	if len(countChan) != 2 {
+		t.Fatalf("regenerate function run count should be 2, %d given", len(countChan))
+	}
+
+	<-time.After(2 * time.Second)
+	data, err = cache.Get("existing", time.Now().Add(1*time.Second), func() ([]byte, error) {
+		countChan <- 1
+		return newContent, nil
+	})()
+	<-time.After(10 * time.Millisecond)
+
+	if bytes.Compare(data, newContent) != 0 {
+		t.Fatalf("data expected to be different, %s expected, %s given", newContent, data)
+	}
+
+	if len(countChan) != 3 {
+		t.Fatalf("regenerate function run count should be 3, %d given", len(countChan))
 	}
 }
