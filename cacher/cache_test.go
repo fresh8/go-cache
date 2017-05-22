@@ -20,7 +20,6 @@ func TestCacher_Get(t *testing.T) {
 		countChan  = make(chan int, 10)
 		regenerate = func() ([]byte, error) {
 			countChan <- 1
-			// count = count + 1
 			return content, nil
 		}
 	)
