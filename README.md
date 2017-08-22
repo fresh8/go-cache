@@ -1,6 +1,6 @@
 [![CircleCI](https://circleci.com/gh/fresh8/go-cache.svg?style=svg)](https://circleci.com/gh/fresh8/go-cache)
 [![Coverage Status](https://coveralls.io/repos/github/fresh8/go-cache/badge.svg)](https://coveralls.io/github/fresh8/go-cache)
-[![Go Report Card](https://goreportcard.com/badge/github.com/fresh8/go-cache)](https://goreportcard.com/report/github.com/github.com/fresh8/go-cache)
+[![Go Report Card](https://goreportcard.com/badge/github.com/fresh8/go-cache)](https://goreportcard.com/report/github.com/fresh8/go-cache)
 
 # go-cache
 
