@@ -6,8 +6,7 @@
 
 Caching system for Golang with background stale cache regeneration.
 
-
-## Getting Started
+## Getting Started
 
 ### Prerequisites
 
