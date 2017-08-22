@@ -46,6 +46,12 @@ go get github.com/fresh8/go-cache
 
 For a basic usage example, please see the [docs example folder](docs/example).
 
+## Adding Engines
+
+Engines follow a [clear interface](https://godoc.org/github.com/fresh8/go-cache/engine/common#Engine) exposed by
+go-cache, so you can create and use your own for whichever backend you desire. Pull requests for new engines are most
+definitely welcome and encouraged!
+
 ## Testing
 
 ### Prerequisites
