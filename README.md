@@ -6,9 +6,10 @@
 
 go-cache is a caching system for Golang with background stale cache regeneration.
 
-go-cache is separated into a `cacher` (a struct that provides an interface for getting and expiring keys), `engines` (a
-number of different storage types, including in memory, Redis, and Aerospike), and `joque` (a job queue using go
-routines and channel communication).
+go-cache is separated into:
+* `cacher` - a struct that provides an entry point for getting and expiring keys for a given engine.
+* `engines` - a number of different storage types, including in memory, Redis, and Aerospike.
+* `joque` - a job queue using go routines and channel communication.
 
 As go-cache is a stale cache, once an item has expired, it is not removed from the cache automatically. Instead, it will
 continue to return the value currently stored, and recreate the value concurrently. Once processed, it will replace the
