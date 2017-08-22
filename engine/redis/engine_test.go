@@ -43,7 +43,7 @@ func TestRedisEngine_Exists(t *testing.T) {
 		t.Fatal("exists command was not used")
 	}
 
-	cmd = fakeConn.Command("EXISTS", "testing:existing").ExpectError(fmt.Errorf("Random error!"))
+	cmd = fakeConn.Command("EXISTS", "testing:existing").ExpectError(fmt.Errorf("random error"))
 	if engine.Exists("non-existing") {
 		t.Fatal("error for existing should return false")
 	}
@@ -93,7 +93,7 @@ func TestRedisEngine_Put(t *testing.T) {
 	content := []byte("hello")
 	expires := time.Now().Add(1 * time.Hour)
 
-	expectedErr := fmt.Errorf("Random error!")
+	expectedErr := fmt.Errorf("random error")
 	cmd := fakeConn.Command("MULTI")
 	cmd1 := fakeConn.Command("SETEX", "testing:new-key", cleanupTimeout.Seconds(), content)
 	cmd2 := fakeConn.Command("SETEX", "testing:expire:new-key", cleanupTimeout.Seconds(), expires.Unix())
@@ -159,7 +159,7 @@ func TestRedisEngine_IsExpired(t *testing.T) {
 
 	fakeConn.Clear()
 
-	expectedErr := fmt.Errorf("Random error!")
+	expectedErr := fmt.Errorf("random error")
 	cmd4 := fakeConn.Command("EXISTS", "testing:expire:existing").Expect([]byte("true")).Expect([]byte("true"))
 	cmd5 := fakeConn.Command("GET", "testing:expire:existing").Expect(time.Now().Add(-1 * time.Minute).Unix()).ExpectError(expectedErr)
 	if !engine.IsExpired("existing") {
@@ -192,7 +192,7 @@ func TestRedisEngine_Expire(t *testing.T) {
 		conn: fakeConn,
 	}, 1*time.Minute)
 
-	expectedErr := fmt.Errorf("Random error!")
+	expectedErr := fmt.Errorf("random error")
 	cmd := fakeConn.Command("MULTI")
 	cmd1 := fakeConn.Command("DEL", "testing:remove-key")
 	cmd2 := fakeConn.Command("DEL", "testing:expire:remove-key")
@@ -254,7 +254,7 @@ func TestRedisEngine_IsLocked(t *testing.T) {
 		t.Fatal("exists command was not used")
 	}
 
-	cmd = fakeConn.Command("EXISTS", "testing:lock:existing").ExpectError(fmt.Errorf("Random error!"))
+	cmd = fakeConn.Command("EXISTS", "testing:lock:existing").ExpectError(fmt.Errorf("random error"))
 	if engine.IsLocked("non-existing") {
 		t.Fatal("error for existing should return false")
 	}
@@ -271,7 +271,7 @@ func TestRedisEngine_Lock(t *testing.T) {
 		conn: fakeConn,
 	}, cleanupTimeout)
 
-	expectedErr := fmt.Errorf("Random error!")
+	expectedErr := fmt.Errorf("random error")
 	cmd1 := fakeConn.Command("SETEX", "testing:lock:lock-key", cleanupTimeout.Seconds(), []byte("1")).Expect("OK").ExpectError(expectedErr)
 
 	err := engine.Lock("lock-key")
@@ -295,7 +295,7 @@ func TestRedisEngine_Unlock(t *testing.T) {
 		conn: fakeConn,
 	}, 1*time.Minute)
 
-	expectedErr := fmt.Errorf("Random error!")
+	expectedErr := fmt.Errorf("random error")
 	cmd1 := fakeConn.Command("DEL", "testing:lock:del-key").Expect("OK").ExpectError(expectedErr)
 
 	err := engine.Unlock("del-key")
