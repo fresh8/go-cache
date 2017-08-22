@@ -72,6 +72,9 @@ func TestCacherGet(t *testing.T) {
 		countChan <- 1
 		return newContent, nil
 	})()
+	if err != nil {
+		t.Fatalf("no error expected, %s given", err)
+	}
 
 	// wait an arbitrary amount of time for the worker queue to process the data
 	<-time.After(10 * time.Millisecond)
