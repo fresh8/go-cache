@@ -1,4 +1,4 @@
 # Examples
 
-* [In Memory Basic implementation](docs/example/memory)
-* [Redis Basic implementation](docs/example/redis)
+* [In Memory Basic implementation](memory)
+* [Redis Basic implementation](redis)
