@@ -20,7 +20,7 @@ func TestInMemory_NewMemoryStore(t *testing.T) {
 	}
 
 	if len(memStore.expire) > 0 {
-		t.Fatalf("expire length should be 0 on initalisation, %d given", len(memStore.expire))
+		t.Fatalf("expire length should be 0 on initialisation, %d given", len(memStore.expire))
 	}
 }
 
@@ -52,7 +52,7 @@ func TestInMemory_Get(t *testing.T) {
 	memStore := NewMemoryStore(time.Second * 60)
 	memStore.store["existing"] = content
 
-	_, err := memStore.Get("non-existant")
+	_, err := memStore.Get("non-existent")
 	if err != common.ErrNonExistentKey {
 		t.Fatalf("key does not exist, should return error")
 	}
