@@ -272,7 +272,7 @@ func TestRedisEngine_Lock(t *testing.T) {
 	}, cleanupTimeout)
 
 	expectedErr := fmt.Errorf("Random error!")
-	cmd1 := fakeConn.Command("SETEX", "testing:lock:lock-key",cleanupTimeout.Seconds(), []byte("1")).Expect("OK").ExpectError(expectedErr)
+	cmd1 := fakeConn.Command("SETEX", "testing:lock:lock-key", cleanupTimeout.Seconds(), []byte("1")).Expect("OK").ExpectError(expectedErr)
 
 	err := engine.Lock("lock-key")
 	if err != nil {
