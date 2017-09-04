@@ -6,7 +6,7 @@
 
 go-cache is a caching system for Golang with background stale cache regeneration.
 
-## tl;dr
+## tl;dr
 
 Vendor go-cache, then copy the [in memory](docs/example/memory) or [redis](docs/example/redis) example.
 
