@@ -6,6 +6,12 @@
 
 go-cache is a caching system for Golang with background stale cache regeneration.
 
+## tl;dr
+
+Vendor go-cache, then copy the [in memory](docs/example/memory) or [redis](docs/example/redis) example.
+
+## Project Overview
+
 go-cache is separated into:
 * `cacher` - a struct that provides an entry point for getting and expiring keys for a given engine.
 * `engines` - a number of different storage types, including in memory, Redis, and Aerospike.
