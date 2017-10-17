@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	redis "gopkg.in/redis.v4"
+	redis "gopkg.in/redis.v6"
 )
 
 // Engine uses redis.v4 as the back end
