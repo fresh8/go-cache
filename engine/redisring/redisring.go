@@ -1,11 +1,9 @@
 package redisring
 
 import (
-	"fmt"
-	"log"
+	"errors"
 	"time"
 
-	"github.com/pkg/errors"
 	redis "gopkg.in/redis.v4"
 )
 
@@ -14,8 +12,7 @@ type Engine struct {
 	prefix string
 	ring   *redis.Ring
 
-	shouldLogErrors bool
-	cleanupTimeout  time.Duration
+	cleanupTimeout time.Duration
 }
 
 const expirePrefix = "expire:"
@@ -26,17 +23,15 @@ func NewRedisRingEngine(
 	prefix string,
 	ring *redis.Ring,
 	cleanupTimeout time.Duration,
-	shouldLogErrors bool,
 ) (*Engine, error) {
 	if ring == nil {
 		return nil, errors.New("nil ring passed to NewRedisRingEngine")
 	}
 
 	return &Engine{
-		prefix:          prefix + ":",
-		ring:            ring,
-		cleanupTimeout:  cleanupTimeout,
-		shouldLogErrors: shouldLogErrors,
+		prefix:         prefix + ":",
+		ring:           ring,
+		cleanupTimeout: cleanupTimeout,
 	}, nil
 }
 
@@ -59,10 +54,6 @@ func (e *Engine) Exists(key string) bool {
 	})
 
 	if pipelineErr != nil {
-		if e.shouldLogErrors {
-			err = errors.Wrap(err, "attempting to check key exists "+k)
-			log.Println(err.Error())
-		}
 		return false
 	}
 
@@ -89,7 +80,7 @@ func (e *Engine) Get(key string) ([]byte, error) {
 	})
 
 	if pipelineErr != nil {
-		return nil, errors.Wrap(err, "attempting to get "+k)
+		return nil, pipelineErr
 	}
 
 	return result, nil
@@ -110,14 +101,14 @@ func (e *Engine) Put(key string, data []byte, expires time.Time) error {
 		dataCmd := p.Set(dataKey, data, e.cleanupTimeout)
 		err = dataCmd.Err()
 		if err != nil {
-			return errors.Wrap(err, "attempting to set data for "+dataKey)
+			return err
 		}
 
 		expireKey := e.getExpireKey(key)
 		expireCmd := p.Set(expireKey, expires.Unix(), e.cleanupTimeout)
 		err = expireCmd.Err()
 		if err != nil {
-			return errors.Wrap(err, "attempting to set expire key "+expireKey)
+			return err
 		}
 
 		return nil
@@ -145,10 +136,6 @@ func (e *Engine) IsExpired(key string) bool {
 		})
 
 		if pipelineErr != nil {
-			if e.shouldLogErrors {
-				err = errors.Wrap(pipelineErr, "checking expired for "+k)
-				log.Println(err.Error())
-			}
 			return false
 		}
 
@@ -186,11 +173,8 @@ func (e *Engine) Lock(key string) error {
 		err = cmd.Err()
 		return err
 	})
-	if pipelineErr != nil {
-		return errors.Wrap(pipelineErr, "attempting to lock "+k) // TODO add key
-	}
 
-	return nil
+	return pipelineErr
 }
 
 // Unlock removes the lock from a given key
@@ -208,11 +192,7 @@ func (e *Engine) Unlock(key string) error {
 		return err
 	})
 
-	if pipelineErr != nil {
-		return errors.Wrap(pipelineErr, "attempting to unlock "+k) // TODO add key
-	}
-
-	return nil
+	return pipelineErr
 }
 
 // Expire marks the key as expired and removes it from the storage engine
@@ -239,12 +219,7 @@ func (e *Engine) Expire(key string) error {
 		return err
 	})
 
-	if pipelineErr != nil {
-		return errors.Wrap(pipelineErr,
-			fmt.Sprintf("attempted to expire [%s, %s, %s]", k, expiryKey, lockKey))
-	}
-
-	return nil
+	return pipelineErr
 }
 
 // helper function that checks to see if a valid ring exists on the engine
@@ -253,11 +228,7 @@ func (e *Engine) hasRing(method string) error {
 		return nil
 	}
 
-	err := errors.New(method + ": nil ring in redisring engine")
-	if e.shouldLogErrors {
-		log.Println(err.Error())
-	}
-	return err
+	return errors.New(method + ": nil ring in redisring engine")
 }
 
 // helper function for locking / unlocking keys
