@@ -1,0 +1,9 @@
+package: github.com/fresh8/go-cache
+import:
+- package: github.com/aerospike/aerospike-client-go
+- package: github.com/garyburd/redigo
+  subpackages:
+  - redis
+- package: github.com/rainycape/memcache
+testImport:
+- package: github.com/rafaeljusto/redigomock

@@ -1,11 +1,10 @@
 package joque
 
-// Job is a unit of work.
+// Job is a unit of work to be processed by the job dispatcher.
 type Job func()
 
-// NewWorker creates takes a numeric id and a channel w/ worker pool.
-func NewWorker(id int, workerPool chan chan Job) Worker {
-	return Worker{
+func newWorker(id int, workerPool chan chan Job) worker {
+	return worker{
 		id:         id,
 		jobQueue:   make(chan Job),
 		workerPool: workerPool,
@@ -13,14 +12,14 @@ func NewWorker(id int, workerPool chan chan Job) Worker {
 	}
 }
 
-type Worker struct {
+type worker struct {
 	id         int
 	jobQueue   chan Job
 	workerPool chan chan Job
 	quitChan   chan bool
 }
 
-func (w Worker) start() {
+func (w worker) start() {
 	go func() {
 		for {
 			// Add my jobQueue to the worker pool.
@@ -38,39 +37,38 @@ func (w Worker) start() {
 	}()
 }
 
-func (w Worker) stop() {
+func (w worker) stop() {
 	go func() {
 		w.quitChan <- true
 	}()
 }
 
-// NewDispatcher creates, and returns a new Dispatcher object.
-func NewDispatcher(jobQueue chan Job, maxWorkers int) *Dispatcher {
+func newDispatcher(jobQueue chan Job, maxWorkers int) *dispatcher {
 	workerPool := make(chan chan Job, maxWorkers)
 
-	return &Dispatcher{
+	return &dispatcher{
 		jobQueue:   jobQueue,
 		maxWorkers: maxWorkers,
 		workerPool: workerPool,
 	}
 }
 
-type Dispatcher struct {
+type dispatcher struct {
 	workerPool chan chan Job
 	maxWorkers int
 	jobQueue   chan Job
 }
 
-func (d *Dispatcher) run() {
+func (d *dispatcher) run() {
 	for i := 0; i < d.maxWorkers; i++ {
-		worker := NewWorker(i+1, d.workerPool)
+		worker := newWorker(i+1, d.workerPool)
 		worker.start()
 	}
 
 	go d.dispatch()
 }
 
-func (d *Dispatcher) dispatch() {
+func (d *dispatcher) dispatch() {
 	for {
 		select {
 		case job := <-d.jobQueue:
@@ -80,13 +78,13 @@ func (d *Dispatcher) dispatch() {
 	}
 }
 
-// Setup
+// Setup creates and returns a job queue, and starts a dispatcher to process the queue
 func Setup(maxQueueSize int, maxWorkers int) chan Job {
 	// Create the job queue.
 	jobQueue := make(chan Job, maxQueueSize)
 
 	// Start the dispatcher.
-	dispatcher := NewDispatcher(jobQueue, maxWorkers)
+	dispatcher := newDispatcher(jobQueue, maxWorkers)
 	dispatcher.run()
 
 	return jobQueue
