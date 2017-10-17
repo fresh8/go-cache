@@ -182,7 +182,7 @@ func TestRedisEngine_IsExpired(t *testing.T) {
 		t.Fatal("exists command was not used")
 	}
 
-	fakeConn = redigomock.NewConn()
+	fakeConn.Clear()
 
 	fakeConn.Command("EXISTS", "testing:expire:existing").ExpectError(expectedErr)
 	if engine.IsExpired("existing") {
