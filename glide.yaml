@@ -5,5 +5,7 @@ import:
   subpackages:
   - redis
 - package: github.com/rainycape/memcache
+- package: gopkg.in/redis.v6
+  version: ^6.7.2
 testImport:
 - package: github.com/rafaeljusto/redigomock
