@@ -143,9 +143,9 @@ func TestRedisEngine_IsExpired(t *testing.T) {
 
 	fakeConn.Clear()
 
-	cmd2 := fakeConn.Command("EXISTS", "testing:expire:existing").Expect([]byte("true"))
-	cmd3 := fakeConn.Command("GET", "testing:expire:existing").Expect(time.Now().Add(1 * time.Minute).Unix())
-	if engine.IsExpired("existing") {
+	cmd2 := fakeConn.Command("EXISTS", "testing:expire:existing-2").Expect([]byte("true"))
+	cmd3 := fakeConn.Command("GET", "testing:expire:existing-2").Expect(time.Now().Add(1 * time.Minute).Unix())
+	if engine.IsExpired("existing-2") {
 		t.Fatal("key exist, marked as non-existent")
 	}
 
@@ -178,7 +178,11 @@ func TestRedisEngine_IsExpired(t *testing.T) {
 		t.Fatal("get should have thrown an error, returning false")
 	}
 
-	fakeConn.Clear()
+	if fakeConn.Stats(cmd4) != 2 {
+		t.Fatal("exists command was not used")
+	}
+
+	fakeConn = redigomock.NewConn()
 
 	fakeConn.Command("EXISTS", "testing:expire:existing").ExpectError(expectedErr)
 	if engine.IsExpired("existing") {
