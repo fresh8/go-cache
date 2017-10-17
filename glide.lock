@@ -1,8 +1,8 @@
-hash: f0aae130c1b950664a9ade77f3292f859b5b81e552cd007e7d94f9f94c141184
-updated: 2017-05-02T11:29:20.975202547+01:00
+hash: 027c157a9b051426aadcd24506fb93cdeaa2f7ab49c9378e5a8399a3a4e69edd
+updated: 2017-10-17T18:22:02.388493743+01:00
 imports:
 - name: github.com/aerospike/aerospike-client-go
-  version: 1dc8cf203d24cd454e71ce40ab4cd0bf3112df90
+  version: dcec4388c832b931227afe511b7f047c6b1b53ce
   subpackages:
   - internal/lua
   - internal/lua/resources
@@ -15,22 +15,28 @@ imports:
   - types/rand
   - utils/buffer
 - name: github.com/garyburd/redigo
-  version: ac91d6ff49bd0d278a90201de77a4f8ad9628e25
+  version: 8873b2f1995f59d4bcdd2b0dc9858e2cb9bf0c13
   subpackages:
   - internal
   - redis
+- name: github.com/go-redis/redis
+  version: 35248155a505a84811be81a2aab1c423317447be
+  subpackages:
+  - internal
+  - internal/consistenthash
+  - internal/hashtag
+  - internal/pool
+  - internal/proto
 - name: github.com/rainycape/memcache
   version: 1031fa0ce2f20c1c0e1e1b51951d8ea02c84fa05
 - name: github.com/yuin/gopher-lua
-  version: b402f3114ec730d8bddb074a6c137309f561aa78
+  version: eb1c7299435cc746b72514f37f74a5154dfe460f
   subpackages:
   - ast
   - parse
   - pm
-- name: golang.org/x/net
-  version: da118f7b8e5954f39d0d2130ab35d4bf0e3cb344
-  subpackages:
-  - context
+- name: gopkg.in/redis.v6
+  version: 35248155a505a84811be81a2aab1c423317447be
 testImports:
 - name: github.com/rafaeljusto/redigomock
-  version: dafd969785a5948b7a263843f53b3f90544772d0
+  version: 0d09823924db512f98f2b139715e1b0cefb4b0df
