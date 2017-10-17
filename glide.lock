@@ -1,5 +1,5 @@
-hash: 027c157a9b051426aadcd24506fb93cdeaa2f7ab49c9378e5a8399a3a4e69edd
-updated: 2017-10-17T18:22:02.388493743+01:00
+hash: 481c966e57777a45abfc223a257ffe2a9559434deec1e20012122544ea1c75c2
+updated: 2017-10-17T18:33:03.512719007+01:00
 imports:
 - name: github.com/aerospike/aerospike-client-go
   version: dcec4388c832b931227afe511b7f047c6b1b53ce
@@ -35,8 +35,6 @@ imports:
   - ast
   - parse
   - pm
-- name: gopkg.in/redis.v6
-  version: 35248155a505a84811be81a2aab1c423317447be
 testImports:
 - name: github.com/rafaeljusto/redigomock
   version: 0d09823924db512f98f2b139715e1b0cefb4b0df

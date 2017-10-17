@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	redis "gopkg.in/redis.v6"
+	"github.com/go-redis/redis"
 )
 
 // Engine uses redis.v4 as the back end
@@ -37,7 +37,7 @@ func NewRedisRingEngine(
 
 // Exists checks to see if a key exists in the store
 func (e *Engine) Exists(key string) bool {
-	var result bool
+	var result int64
 	var err error
 
 	err = e.hasRing("Exists")
@@ -47,7 +47,7 @@ func (e *Engine) Exists(key string) bool {
 
 	k := e.prefix + key
 
-	_, pipelineErr := e.ring.Pipelined(func(p *redis.Pipeline) error {
+	_, pipelineErr := e.ring.Pipelined(func(p redis.Pipeliner) error {
 		cmd := p.Exists(k)
 		result, err = cmd.Result()
 		return err
@@ -57,7 +57,7 @@ func (e *Engine) Exists(key string) bool {
 		return false
 	}
 
-	return result
+	return result == 1
 }
 
 // Get retrieves data from teh store based on the key if it exists,
@@ -73,7 +73,7 @@ func (e *Engine) Get(key string) ([]byte, error) {
 
 	k := e.prefix + key
 
-	_, pipelineErr := e.ring.Pipelined(func(p *redis.Pipeline) error {
+	_, pipelineErr := e.ring.Pipelined(func(p redis.Pipeliner) error {
 		cmd := p.Get(k)
 		result, err = cmd.Bytes()
 		return err
@@ -96,7 +96,7 @@ func (e *Engine) Put(key string, data []byte, expires time.Time) error {
 		return err
 	}
 
-	_, pipelineErr := e.ring.Pipelined(func(p *redis.Pipeline) error {
+	_, pipelineErr := e.ring.Pipelined(func(p redis.Pipeliner) error {
 		dataKey := e.prefix + key
 		dataCmd := p.Set(dataKey, data, e.cleanupTimeout)
 		err = dataCmd.Err()
@@ -129,7 +129,7 @@ func (e *Engine) IsExpired(key string) bool {
 
 	if e.Exists(expirePrefix + key) {
 		k := e.getExpireKey(key)
-		_, pipelineErr := e.ring.Pipelined(func(p *redis.Pipeline) error {
+		_, pipelineErr := e.ring.Pipelined(func(p redis.Pipeliner) error {
 			cmd := p.Get(k)
 			result, err = cmd.Int64()
 			return err
@@ -168,7 +168,7 @@ func (e *Engine) Lock(key string) error {
 	}
 
 	k := e.getLockKey(key)
-	_, pipelineErr := e.ring.Pipelined(func(p *redis.Pipeline) error {
+	_, pipelineErr := e.ring.Pipelined(func(p redis.Pipeliner) error {
 		cmd := p.Set(k, []byte("1"), e.cleanupTimeout)
 		err = cmd.Err()
 		return err
@@ -186,7 +186,7 @@ func (e *Engine) Unlock(key string) error {
 	}
 
 	k := e.getLockKey(key)
-	_, pipelineErr := e.ring.Pipelined(func(p *redis.Pipeline) error {
+	_, pipelineErr := e.ring.Pipelined(func(p redis.Pipeliner) error {
 		cmd := p.Del(k)
 		err = cmd.Err()
 		return err
@@ -207,7 +207,7 @@ func (e *Engine) Expire(key string) error {
 	expiryKey := e.getExpireKey(key)
 	lockKey := e.getLockKey(key)
 
-	_, pipelineErr := e.ring.Pipelined(func(p *redis.Pipeline) error {
+	_, pipelineErr := e.ring.Pipelined(func(p redis.Pipeliner) error {
 		// delete all relevant keys
 		cmd := p.Del(
 			k,
