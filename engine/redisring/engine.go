@@ -163,13 +163,8 @@ func (e *Engine) Unlock(key string) error {
 	}
 
 	k := e.getLockKey(key)
-	_, pipelineErr := e.ring.Pipelined(func(p redis.Pipeliner) error {
-		cmd := p.Del(k)
-		err = cmd.Err()
-		return err
-	})
-
-	return pipelineErr
+	cmd := e.ring.Del(k)
+	return cmd.Err()
 }
 
 // Expire marks the key as expired and removes it from the storage engine
@@ -184,19 +179,8 @@ func (e *Engine) Expire(key string) error {
 	expiryKey := e.getExpireKey(key)
 	lockKey := e.getLockKey(key)
 
-	_, pipelineErr := e.ring.Pipelined(func(p redis.Pipeliner) error {
-		// delete all relevant keys
-		cmd := p.Del(
-			k,
-			expiryKey,
-			lockKey,
-		)
-
-		err = cmd.Err()
-		return err
-	})
-
-	return pipelineErr
+	cmd := e.ring.Del(k, expiryKey, lockKey)
+	return cmd.Err()
 }
 
 // helper function that checks to see if a valid ring exists on the engine
