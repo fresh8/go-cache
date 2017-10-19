@@ -18,14 +18,14 @@ type Engine struct {
 const expirePrefix = "expire:"
 const lockPrefix = "lock:"
 
-// NewRedisRingEngine creates a new redis ring for use as a store
-func NewRedisRingEngine(
+// NewRedisRingStore creates a new redis ring for use as a store
+func NewRedisRingStore(
 	prefix string,
 	ring *redis.Ring,
 	cleanupTimeout time.Duration,
 ) (*Engine, error) {
 	if ring == nil {
-		return nil, errors.New("nil ring passed to NewRedisRingEngine")
+		return nil, errors.New("nil ring passed to NewRedisRingStore")
 	}
 
 	return &Engine{
