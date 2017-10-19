@@ -47,13 +47,10 @@ func (e *Engine) Exists(key string) bool {
 
 	k := e.prefix + key
 
-	_, pipelineErr := e.ring.Pipelined(func(p redis.Pipeliner) error {
-		cmd := p.Exists(k)
-		result, err = cmd.Result()
-		return err
-	})
+	cmd := e.ring.Exists(k)
+	result, err = cmd.Result()
 
-	if pipelineErr != nil {
+	if err != nil {
 		return false
 	}
 
@@ -63,7 +60,6 @@ func (e *Engine) Exists(key string) bool {
 // Get retrieves data from teh store based on the key if it exists,
 // returns an error if the key does not exist or the redis connection fails
 func (e *Engine) Get(key string) ([]byte, error) {
-	var result []byte
 	var err error
 
 	err = e.hasRing("Get")
@@ -73,17 +69,8 @@ func (e *Engine) Get(key string) ([]byte, error) {
 
 	k := e.prefix + key
 
-	_, pipelineErr := e.ring.Pipelined(func(p redis.Pipeliner) error {
-		cmd := p.Get(k)
-		result, err = cmd.Bytes()
-		return err
-	})
-
-	if pipelineErr != nil {
-		return nil, pipelineErr
-	}
-
-	return result, nil
+	cmd := e.ring.Get(k)
+	return cmd.Bytes()
 }
 
 // Put stores data against a key, else it returns an error
@@ -96,25 +83,22 @@ func (e *Engine) Put(key string, data []byte, expires time.Time) error {
 		return err
 	}
 
-	_, pipelineErr := e.ring.Pipelined(func(p redis.Pipeliner) error {
-		dataKey := e.prefix + key
-		dataCmd := p.Set(dataKey, data, e.cleanupTimeout)
-		err = dataCmd.Err()
-		if err != nil {
-			return err
-		}
+	dataKey := e.prefix + key
 
-		expireKey := e.getExpireKey(key)
-		expireCmd := p.Set(expireKey, expires.Unix(), e.cleanupTimeout)
-		err = expireCmd.Err()
-		if err != nil {
-			return err
-		}
+	dataCmd := e.ring.Set(dataKey, data, e.cleanupTimeout)
+	err = dataCmd.Err()
+	if err != nil {
+		return err
+	}
 
-		return nil
-	})
+	expireKey := e.getExpireKey(key)
+	expireCmd := e.ring.Set(expireKey, expires.Unix(), e.cleanupTimeout)
+	err = expireCmd.Err()
+	if err != nil {
+		return err
+	}
 
-	return pipelineErr
+	return nil
 }
 
 // IsExpired checks to see if the given key has expired
@@ -129,13 +113,10 @@ func (e *Engine) IsExpired(key string) bool {
 
 	if e.Exists(expirePrefix + key) {
 		k := e.getExpireKey(key)
-		_, pipelineErr := e.ring.Pipelined(func(p redis.Pipeliner) error {
-			cmd := p.Get(k)
-			result, err = cmd.Int64()
-			return err
-		})
+		cmd := e.ring.Get(k)
+		result, err = cmd.Int64()
 
-		if pipelineErr != nil {
+		if err != nil {
 			return false
 		}
 
@@ -168,13 +149,9 @@ func (e *Engine) Lock(key string) error {
 	}
 
 	k := e.getLockKey(key)
-	_, pipelineErr := e.ring.Pipelined(func(p redis.Pipeliner) error {
-		cmd := p.Set(k, []byte("1"), e.cleanupTimeout)
-		err = cmd.Err()
-		return err
-	})
+	cmd := e.ring.Set(k, []byte("1"), e.cleanupTimeout)
 
-	return pipelineErr
+	return cmd.Err()
 }
 
 // Unlock removes the lock from a given key
