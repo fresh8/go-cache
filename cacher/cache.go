@@ -6,7 +6,6 @@ package cacher
 import (
 	"time"
 
-	"github.com/connectedventures/f8-pkg/logging"
 	"github.com/fresh8/go-cache/engine/common"
 	"github.com/fresh8/go-cache/joque"
 	"github.com/fresh8/go-cache/metrics"
@@ -91,11 +90,6 @@ func (c cacher) get(key string, expires time.Time, regenerate func() ([]byte, er
 		// store in  cache
 		data, err = regenerate()
 		if err != nil {
-			// log the error
-			logging.WithFields(logging.Fields{
-				"key": key,
-				"err": err.Error(),
-			}).Error("go_cache cacher error: regenerate() error")
 			metrics.GoCacheRegenerateFailure.
 				With(prometheus.Labels{"location": "is_locked"}).
 				Inc()
