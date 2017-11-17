@@ -1,5 +1,5 @@
-hash: 481c966e57777a45abfc223a257ffe2a9559434deec1e20012122544ea1c75c2
-updated: 2017-10-17T18:33:03.512719007+01:00
+hash: 2d7d9a707183b806ef31c4344ece9bf0014440f4657fc2665c5c6bd1e8dd9072
+updated: 2017-11-17T08:58:47.808891051Z
 imports:
 - name: github.com/aerospike/aerospike-client-go
   version: dcec4388c832b931227afe511b7f047c6b1b53ce
@@ -14,19 +14,47 @@ imports:
   - types/particle_type
   - types/rand
   - utils/buffer
+- name: github.com/beorn7/perks
+  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
+  subpackages:
+  - quantile
 - name: github.com/garyburd/redigo
   version: 8873b2f1995f59d4bcdd2b0dc9858e2cb9bf0c13
   subpackages:
   - internal
   - redis
 - name: github.com/go-redis/redis
-  version: 35248155a505a84811be81a2aab1c423317447be
+  version: d0f86971b5d61de9cebd2616b932acb7ba14d957
   subpackages:
   - internal
   - internal/consistenthash
   - internal/hashtag
   - internal/pool
   - internal/proto
+- name: github.com/golang/protobuf
+  version: 1fb8fd32a09087bcd727225167edd31e1b9ceb24
+  subpackages:
+  - proto
+- name: github.com/matttproud/golang_protobuf_extensions
+  version: c12348ce28de40eed0136aa2b644d0ee0650e56c
+  subpackages:
+  - pbutil
+- name: github.com/prometheus/client_golang
+  version: 967789050ba94deca04a5e84cce8ad472ce313c1
+  subpackages:
+  - prometheus
+- name: github.com/prometheus/client_model
+  version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
+  subpackages:
+  - go
+- name: github.com/prometheus/common
+  version: 85637ea67b04b5c3bb25e671dacded2977f8f9f6
+  subpackages:
+  - expfmt
+  - internal/bitbucket.org/ww/goautoneg
+  - model
+- name: github.com/prometheus/procfs
+  version: abf152e5f3e97f2fafac028d2cc06c1feb87ffa5
 - name: github.com/rainycape/memcache
   version: 1031fa0ce2f20c1c0e1e1b51951d8ea02c84fa05
 - name: github.com/yuin/gopher-lua
