@@ -51,28 +51,27 @@ var (
 		Help:      "Count of number of times the job queue is blocked for processing functions but cache still returns data",
 	})
 
-	// GoCacheEngineFailedGet request keeps track of engine.Get requests
-	GoCacheEngineFailedGet = prometheus.NewCounter(prometheus.CounterOpts{
+	// GoCacheEngineFailed request keeps track of engine.Get requests
+	GoCacheEngineFailed = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: ServiceGroup,
 		Subsystem: ServiceName,
-		Name:      "cache_engine_get_error",
-		Help:      "Count of number of times the engine get function returns an error",
-	})
+		Name:      "cache_engine_error",
+		Help:      "Count of number of times the engine type call returns an error",
+	},
+		[]string{
+			"type",
+		})
 
 	// GoCacheRegenerateFailure keeps track of regenerate function calls which fail
-	GoCacheRegenerateFailure = prometheus.NewCounter(prometheus.CounterOpts{
+	GoCacheRegenerateFailure = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: ServiceGroup,
 		Subsystem: ServiceName,
 		Name:      "cache_engine_regenerate_failure",
 		Help:      "Count of number of regenerate calls that return an error",
-	})
-	// GoCacheEngineFailedPut keeps track of the number of engine put requests that fail
-	GoCacheEngineFailedPut = prometheus.NewCounter(prometheus.CounterOpts{
-		Namespace: ServiceGroup,
-		Subsystem: ServiceName,
-		Name:      "cache_engine_put_error",
-		Help:      "Count of number of times the engine put function returns an error",
-	})
+	},
+		[]string{
+			"location",
+		})
 
 	// GoCacheKeyHits keeps track of key hits
 	GoCacheKeyHits = prometheus.NewCounter(prometheus.CounterOpts{
@@ -95,9 +94,8 @@ func init() {
 	prometheus.MustRegister(GoCacheProcessedFunctions)
 	prometheus.MustRegister(GoCacheEngineLocked)
 	prometheus.MustRegister(GoCacheEngineLockedReturnData)
-	prometheus.MustRegister(GoCacheEngineFailedGet)
+	prometheus.MustRegister(GoCacheEngineFailed)
 	prometheus.MustRegister(GoCacheRegenerateFailure)
-	prometheus.MustRegister(GoCacheEngineFailedPut)
 	prometheus.MustRegister(GoCacheKeyHits)
 	prometheus.MustRegister(GoCacheKeyMiss)
 }
