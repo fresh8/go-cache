@@ -1,5 +1,12 @@
 package joque
 
+import (
+	"fmt"
+
+	"github.com/fresh8/go-cache/metrics"
+	"github.com/prometheus/client_golang/prometheus"
+)
+
 // Job is a unit of work to be processed by the job dispatcher.
 type Job func()
 
@@ -29,6 +36,10 @@ func (w worker) start() {
 			case job := <-w.jobQueue:
 				// Dispatcher has added a job to my jobQueue.
 				job()
+				// Metric to keep track of how many jobs have been processed.
+				metrics.GoCacheProcessedFunctions.
+					With(prometheus.Labels{"worker_id": fmt.Sprintf("%d", w.id)}).
+					Inc()
 			case <-w.quitChan:
 				// We have been asked to stop.
 				return
