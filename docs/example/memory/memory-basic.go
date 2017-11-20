@@ -13,7 +13,7 @@ import (
 func main() {
 	memoryEngine := engine.NewMemoryStore(15 * time.Second)
 
-	cacher := cacher.NewCacher(memoryEngine, 10, 10)
+	cacher := cacher.NewCacher(memoryEngine, 10, 10, 5, 1*time.Second)
 
 	for {
 		time.Sleep(1 * time.Second)

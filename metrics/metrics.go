@@ -35,12 +35,15 @@ var (
 		})
 	// GoCacheEngineLocked keeps track of missing cached request where
 	// the job queue is locked
-	GoCacheEngineLocked = prometheus.NewCounter(prometheus.CounterOpts{
+	GoCacheEngineLocked = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: ServiceGroup,
 		Subsystem: ServiceName,
 		Name:      "cache_engine_locked",
 		Help:      "Count of number of times the job queue is blocked for processing functions",
-	})
+	},
+		[]string{
+			"location",
+		})
 
 	// GoCacheEngineLockedReturnData keeps track of job queue locks which stop the cached data
 	// from being regenerated.

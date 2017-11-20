@@ -31,7 +31,7 @@ func main() {
 		log.Fatal(`¯\_(ツ)_/¯`)
 	}
 
-	cache := cacher.NewCacher(redisCacheEngine, 10, 10)
+	cache := cacher.NewCacher(redisCacheEngine, 10, 10, 5, 1*time.Second)
 
 	if cache == nil {
 		log.Fatal(`¯\_(ツ)_/¯`)
