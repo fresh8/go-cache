@@ -12,7 +12,7 @@ import (
 func main() {
 	memoryEngine := engine.NewMemoryStore(10 * time.Second)
 
-	cache := cacher.NewCacher(memoryEngine, 10, 10)
+	cache := cacher.NewCacher(memoryEngine, 10, 10, 5, 1*time.Second)
 
 	err := integration.RunSuite(cache)
 	if err != nil {

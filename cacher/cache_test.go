@@ -14,9 +14,11 @@ import (
 
 func TestCacherGet(t *testing.T) {
 	var (
-		e       = engine.NewMemoryStore(time.Second * 60)
-		cache   = NewCacher(e, 5, 5)
-		content = []byte("hello")
+		e        = engine.NewMemoryStore(time.Second * 60)
+		retry    = 3
+		waitTime = time.Duration(1 * time.Millisecond)
+		cache    = NewCacher(e, 5, 5, retry, waitTime)
+		content  = []byte("hello")
 
 		// count our responses using a channel to avoid data races
 		countChan  = make(chan int, 10)
@@ -97,6 +99,8 @@ func TestCacherCreatesThenCaches(t *testing.T) {
 		regenCallCount = 0
 		putCallCount   = 0
 		getCallCount   = 0
+		retry          = 3
+		waitTime       = time.Duration(1 * time.Millisecond)
 	)
 
 	eng.GetFunc = func(key string) ([]byte, error) {
@@ -122,7 +126,7 @@ func TestCacherCreatesThenCaches(t *testing.T) {
 		return nil
 	}
 
-	cache := NewCacher(eng, 5, 5)
+	cache := NewCacher(eng, 5, 5, retry, waitTime)
 
 	regenerate := func() ([]byte, error) {
 		regenCallCount = regenCallCount + 1
@@ -203,6 +207,8 @@ func TestCacherRegeneratesOnExpiry(t *testing.T) {
 		regenCallCount = make(chan int, 10)
 		putCallCount   = make(chan int, 10)
 		getCallCount   = make(chan int, 10)
+		retry          = 3
+		waitTime       = time.Duration(1 * time.Millisecond)
 	)
 
 	eng.GetFunc = func(key string) ([]byte, error) {
@@ -228,7 +234,7 @@ func TestCacherRegeneratesOnExpiry(t *testing.T) {
 		return nil
 	}
 
-	cache := NewCacher(eng, 5, 5)
+	cache := NewCacher(eng, 5, 5, retry, waitTime)
 
 	regenerate := func() ([]byte, error) {
 		regenCallCount <- 1
@@ -309,6 +315,8 @@ func TestCacherPersistsOnRegenerateError(t *testing.T) {
 		regenCallCount = make(chan int, 10)
 		putCallCount   = make(chan int, 10)
 		getCallCount   = make(chan int, 10)
+		retry          = 3
+		waitTime       = time.Duration(1 * time.Millisecond)
 	)
 
 	eng.GetFunc = func(key string) ([]byte, error) {
@@ -334,7 +342,7 @@ func TestCacherPersistsOnRegenerateError(t *testing.T) {
 		return nil
 	}
 
-	cache := NewCacher(eng, 5, 5)
+	cache := NewCacher(eng, 5, 5, retry, waitTime)
 
 	regenerate := func() ([]byte, error) {
 		regenCallCount <- 1
@@ -409,5 +417,36 @@ func TestCacherPersistsOnRegenerateError(t *testing.T) {
 
 	if bytes.Compare(data, content) != 0 {
 		t.Fatalf("data expected to be different, %s expected, %s given", content, data)
+	}
+}
+
+func TestRetryCheck(t *testing.T) {
+
+	var (
+		retry    = 3
+		waitTime = time.Duration(1 * time.Nanosecond)
+	)
+	err := RetryCheck(retry, waitTime, func() error {
+		// Return an error code until retries counter is less than one
+		if retry < 1 {
+			return common.ErrEngineLocked
+		}
+		// Return no error when number of retries is reduced to zero
+		return nil
+	})
+
+	if err != nil {
+		t.Fatalf("no error expected, %s given", err)
+	}
+
+	retry = 3
+	waitTime = time.Duration(1 * time.Nanosecond)
+	err = RetryCheck(retry, waitTime, func() error {
+		// Return an error code until retries counter is less than one
+		return common.ErrEngineLocked
+	})
+
+	if err != common.ErrEngineLocked {
+		t.Fatalf("error expected, %s given", err)
 	}
 }

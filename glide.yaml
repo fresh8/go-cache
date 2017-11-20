@@ -7,5 +7,9 @@ import:
 - package: github.com/rainycape/memcache
 - package: github.com/go-redis/redis
   version: ^6.7.2
+- package: github.com/prometheus/client_golang
+  version: ~0.9.0-pre1
+  subpackages:
+  - prometheus
 testImport:
 - package: github.com/rafaeljusto/redigomock
