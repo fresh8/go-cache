@@ -40,7 +40,7 @@ func (c cacher) get(key string) (data []byte, err error) {
 		}
 
 		// Return, data is fresh enough
-		if !c.engine.IsExpired(key) {
+		if c.engine.IsExpired(key) {
 			data = nil
 			return
 		}
@@ -58,10 +58,17 @@ func (c cacher) put(key string, expires time.Time, data []byte) (err error) {
 	}
 
 	// Lock on initial generation so that things
-	c.engine.Lock(key)
-	defer c.engine.Unlock(key)
+	err = c.engine.Lock(key)
+	if err != nil {
+		return err
+	}
 
 	err = c.engine.Put(key, data, expires)
+	if err != nil {
+		return err
+	}
+
+	err = c.engine.Unlock(key)
 
 	return
 }

@@ -2,80 +2,165 @@ package basiccacher
 
 import (
 	"bytes"
+	"errors"
+	"strings"
 	"testing"
 	"time"
 
-	engine "github.com/fresh8/go-cache/engine/memory"
+	"github.com/fresh8/go-cache/engine/common"
 )
 
-// TODO: This should be replaced by a mock, not use memory engine
+func TestGet(t *testing.T) {
+	expectedData := []byte("hello")
+	// set up
+	engine := &common.EngineMock{
+		ExistsFunc: func(in1 string) bool {
+			if strings.Contains(in1, "EXISTS") {
+				return true
+			}
+			return false
+		},
+		GetFunc: func(in1 string) ([]byte, error) {
+			return expectedData, nil
+		},
+		IsExpiredFunc: func(in1 string) bool {
+			if strings.Contains(in1, "EXPIRED") {
+				return true
+			}
+			return false
+		},
+	}
+	cacher := NewCacher(engine, 5, 5)
 
-func TestCacherGetPut(t *testing.T) {
-	var (
-		e       = engine.NewMemoryStore(time.Second * 60)
-		cache   = NewCacher(e, 5, 5)
-		content = []byte("hello")
-	)
+	t.Run("key doesn't exist", func(*testing.T) {
+		data, err := cacher.Get("NOPE")
+		if data != nil {
+			t.Errorf("no data expected, got %s", data)
+		}
+		if err != nil {
+			t.Errorf("no error expected, got %s", err.Error())
+		}
+	})
 
-	// First try to get something which we know doens't exist
-	data, err := cache.Get("existing")
-	if err != nil {
-		t.Fatalf("no error expected, %s given", err)
+	t.Run("key exists, not expired", func(*testing.T) {
+		data, err := cacher.Get("EXISTS")
+		if bytes.Compare(expectedData, data) != 0 {
+			t.Errorf("%s expected, got %s", expectedData, data)
+		}
+		if err != nil {
+			t.Errorf("no error expected, got %s", err.Error())
+		}
+	})
+
+	t.Run("key exists, expired", func(*testing.T) {
+		data, err := cacher.Get("EXISTS_EXPIRED")
+		if data != nil {
+			t.Errorf("no data expected, got %s", data)
+		}
+		if err != nil {
+			t.Errorf("no error expected, got %s", err.Error())
+		}
+	})
+}
+
+func TestPut(t *testing.T) {
+	engine := &common.EngineMock{
+		IsLockedFunc: func(in1 string) bool {
+			if strings.Contains(in1, "LOCKED") {
+				return true
+			}
+			return false
+		},
+		LockFunc: func(in1 string) error {
+			if strings.Contains(in1, "LOCKERROR") {
+				return errors.New("lock error")
+			}
+			return nil
+		},
+		UnlockFunc: func(in1 string) error {
+			if strings.Contains(in1, "UNLOCKERROR") {
+				return errors.New("unlock error")
+			}
+			return nil
+		},
+		IsExpiredFunc: func(in1 string) bool {
+			if strings.Contains(in1, "EXPIRED") {
+				return true
+			}
+			return false
+		},
+		PutFunc: func(in1 string, data []byte, ttl time.Time) error {
+			if strings.Contains(in1, "PUTERROR") {
+				return errors.New("put error")
+			}
+			return nil
+		},
 	}
 
-	if data != nil {
-		t.Fatalf("no data expected, %s given", data)
+	cacher := NewCacher(engine, 5, 5)
+
+	expires := time.Now()
+	data := []byte("hello")
+
+	t.Run("engine locked", func(*testing.T) {
+		err := cacher.Put("LOCKED", expires, data)
+		if err != common.ErrEngineLocked {
+			t.Errorf("expected error %s, got %s", common.ErrEngineLocked, err.Error())
+		}
+	})
+
+	t.Run("lock error", func(*testing.T) {
+		err := cacher.Put("LOCKERROR", expires, data)
+		if err == nil {
+			t.Errorf("expected error, got none")
+		}
+	})
+
+	t.Run("put error", func(*testing.T) {
+		err := cacher.Put("PUTERROR", expires, data)
+		if err == nil {
+			t.Errorf("expected error, got none")
+		}
+	})
+
+	t.Run("unlock error", func(*testing.T) {
+		err := cacher.Put("UNLOCKERROR", expires, data)
+		if err == nil {
+			t.Errorf("expected error, got none")
+		}
+	})
+
+	t.Run("put valid", func(*testing.T) {
+		err := cacher.Put("anything else", expires, data)
+		if err != nil {
+			t.Errorf("expected no error, got %s", err)
+		}
+	})
+}
+
+func TestExpire(t *testing.T) {
+	engine := &common.EngineMock{
+		ExpireFunc: func(in1 string) error {
+			if strings.Contains(in1, "EXPIREERROR") {
+				return errors.New("error")
+			}
+			return nil
+		},
 	}
 
-	// put something in the cache and expect it to be there
+	cacher := NewCacher(engine, 5, 5)
 
-	err = cache.Put("existing", time.Now().Add(1*time.Minute), content)
-	if err != nil {
-		t.Fatalf("no error expected, %s given", err)
-	}
+	t.Run("expire error", func(*testing.T) {
+		err := cacher.Expire("EXPIREERROR")
+		if err == nil {
+			t.Errorf("expected  error, got none")
+		}
+	})
 
-	data, err = cache.Get("existing")
-	if bytes.Compare(content, data) != 0 {
-		t.Fatalf("data expected to be the same, %s expected, %s given", content, data)
-	}
-
-	e.Expire("existing")
-
-	// try to get it again
-	data, err = cache.Get("existing")
-	if err != nil {
-		t.Fatalf("no error expected, %s given", err)
-	}
-
-	if data != nil {
-		t.Fatalf("no data expected, %s given", data)
-	}
-
-	// set it again with different content
-	content = []byte("goodbye")
-
-	// use a shorter cache TTL
-	err = cache.Put("existing", time.Now().Add(1*time.Second), content)
-	if err != nil {
-		t.Fatalf("no error expected, %s given", err)
-	}
-
-	// read it immediately
-	data, err = cache.Get("existing")
-	if bytes.Compare(content, data) != 0 {
-		t.Fatalf("data expected to be the same, %s expected, %s given", content, data)
-	}
-
-	<-time.After(2 * time.Second)
-
-	// try to read it again
-	// try to get it again
-	data, err = cache.Get("existing")
-	if err != nil {
-		t.Fatalf("no error expected, %s given", err)
-	}
-
-	if data != nil {
-		t.Fatalf("no data expected, %s given", data)
-	}
+	t.Run("expire ok", func(*testing.T) {
+		err := cacher.Expire("anything else")
+		if err != nil {
+			t.Errorf("expected no error, got %s", err)
+		}
+	})
 }
