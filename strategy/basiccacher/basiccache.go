@@ -44,10 +44,7 @@ func (c cacher) get(key string) (data []byte, err error) {
 			data = nil
 			return
 		}
-
-		return
 	}
-
 	return
 }
 
