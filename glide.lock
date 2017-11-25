@@ -1,5 +1,5 @@
 hash: 481c966e57777a45abfc223a257ffe2a9559434deec1e20012122544ea1c75c2
-updated: 2017-10-17T18:33:03.512719007+01:00
+updated: 2017-11-22T16:28:07.951522127Z
 imports:
 - name: github.com/aerospike/aerospike-client-go
   version: dcec4388c832b931227afe511b7f047c6b1b53ce
@@ -20,7 +20,7 @@ imports:
   - internal
   - redis
 - name: github.com/go-redis/redis
-  version: 35248155a505a84811be81a2aab1c423317447be
+  version: e5e021257bfc6d5fbf0beac33e30194311fb189f
   subpackages:
   - internal
   - internal/consistenthash
@@ -30,7 +30,7 @@ imports:
 - name: github.com/rainycape/memcache
   version: 1031fa0ce2f20c1c0e1e1b51951d8ea02c84fa05
 - name: github.com/yuin/gopher-lua
-  version: eb1c7299435cc746b72514f37f74a5154dfe460f
+  version: 609c9cd2697344dec90fe0543c6493e3b8da3435
   subpackages:
   - ast
   - parse
